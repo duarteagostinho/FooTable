@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FooTable - Football Game Results Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in',
+                        'slide-in': 'slideIn 0.7s ease-out',
+                        'bounce-in': 'bounceIn 0.6s ease-out'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1.0); }
+        }
+    </style>
+
+    <!-- Firebase CDN -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        // Initialize Firebase (you'll need to replace with your config)
+        const firebaseConfig = {
+            // You'll add your Firebase config here
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+
+        // Only initialize if config is real (not placeholder)
+        if (firebaseConfig.apiKey !== "your-api-key") {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+
+            // Make Firebase available globally
+            window.firebase = { db, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp };
+        } else {
+            console.log('Firebase config contains placeholder values - Firebase not initialized');
+        }
+    </script>
+</head>
+
+<body class="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
+    <!-- Firebase Status Banner -->
+    <div id="firebaseStatus" class="hidden bg-yellow-100 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-4 text-sm">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-yellow-700 dark:text-yellow-300">
+                    <strong>Firebase Setup Required:</strong> Please configure your Firebase credentials to enable data persistence and sync across devices.
+                    <button onclick="showFirebaseSetup()" class="underline ml-2">Setup Now</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 backdrop-blur-sm bg-white/80 dark:bg-gray-900/80">
+        <div class="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 lg:h-18">
+                <div class="flex items-center">
+                    <h1 class="text-xl md:text-2xl lg:text-3xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
+                        <span class="text-2xl">⚽</span>
+                        <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">FooTable</span>
+                    </h1>
+                </div>
+                <div class="flex items-center gap-4 md:gap-6">
+                    <!-- Firebase Status -->
+                    <div id="firebaseIndicator" class="flex items-center gap-2">
+                        <div id="connectionStatus" class="w-3 h-3 rounded-full bg-red-500" title="Offline"></div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Firebase</span>
+                    </div>
+                    
+                    <!-- Dark Mode Toggle -->
+                    <button id="themeToggle" onclick="toggleTheme()" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    
+                    <!-- Debug Button (temporary) -->
+                    <button onclick="resetAllData()" class="p-2 rounded-lg bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 transition-colors text-xs" title="Reset All Data (Debug)">
+                        🔄
+                    </button>
+                    
+                    <div id="userInfo" class="text-sm md:text-base text-gray-700 dark:text-gray-300"></div>
+                    <button id="loginBtn" onclick="showLogin()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 md:px-6 py-2.5 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm md:text-base">
+                        Login
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div id="app" class="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="text-center mb-16 lg:mb-20 animate-fade-in">
+            <div class="inline-block p-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 shadow-2xl mb-8">
+                <span class="text-5xl">⚽</span>
+            </div>
+            <h2 class="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent mb-6 leading-tight">
+                Football Game Tracker
+            </h2>
+            <p class="text-gray-600 dark:text-gray-400 text-lg md:text-xl lg:text-2xl max-w-4xl mx-auto font-medium">
+                Keep track of your weekend games with friends and see who's the champion! 🏆
+            </p>
+        </div>
+
+        <!-- Add Game Button -->
+        <div class="text-center mb-12 lg:mb-16 animate-slide-in">
+            <div class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 lg:gap-8">
+                <button onclick="showAddGameModal()" class="group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 md:px-10 lg:px-12 py-4 md:py-5 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl">
+                    <span class="flex items-center justify-center gap-3">
+                        ⚽ Add New Game
+                    </span>
+                </button>
+                
+                <div id="adminControls" class="hidden flex flex-col sm:flex-row gap-4 sm:gap-6">
+                    <button onclick="showAddPlayerModal()" class="group bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-8 md:px-10 lg:px-12 py-4 md:py-5 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl">
+                        👤 Add Player
+                    </button>
+                    
+                    <button onclick="showPlayersModal()" class="group bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-8 md:px-10 lg:px-12 py-4 md:py-5 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl">
+                        👥 Manage Players
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-8 lg:gap-10 animate-fade-in">
+            <!-- Recent Games -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/20 transition-all duration-300 transform hover:-translate-y-1">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-3 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 shadow-lg">
+                        <span class="text-white text-2xl">🏟️</span>
+                    </div>
+                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Recent Games</h3>
+                </div>
+                <div id="recentGames" class="space-y-5">
+                    <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No games yet! Add your first game above. 🎯</p>
+                </div>
+            </div>
+
+            <!-- Top Players -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/20 transition-all duration-300 transform hover:-translate-y-1">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-3 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg">
+                        <span class="text-white text-2xl">🏆</span>
+                    </div>
+                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Top Players</h3>
+                </div>
+                <div id="topPlayers">
+                    <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No player stats yet! 📊</p>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/20 transition-all duration-300 transform hover:-translate-y-1 lg:col-span-2 xl:col-span-1">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+                        <span class="text-white text-2xl">📈</span>
+                    </div>
+                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Quick Stats</h3>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center p-5 lg:p-6 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800">
+                        <span class="font-semibold text-lg text-gray-800 dark:text-gray-200">Total Games:</span>
+                        <span id="totalGames" class="font-bold text-3xl text-blue-600 dark:text-blue-400">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-5 lg:p-6 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
+                        <span class="font-semibold text-lg text-gray-800 dark:text-gray-200">Total Players:</span>
+                        <span id="totalPlayers" class="font-bold text-3xl text-green-600 dark:text-green-400">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-5 lg:p-6 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800">
+                        <span class="font-semibold text-lg text-gray-800 dark:text-gray-200">Average Goals:</span>
+                        <span id="avgGoals" class="font-bold text-3xl text-purple-600 dark:text-purple-400">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Setup Modal -->
+    <div id="firebaseSetupModal" class="fixed inset-0 bg-black/60 backdrop-blur-md hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 shadow-lg">
+                        <span class="text-white text-2xl">🔥</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white">Firebase Setup</h3>
+                </div>
+                
+                <div class="space-y-6">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl">
+                        <h4 class="font-bold text-lg mb-4 text-gray-900 dark:text-white">Why Firebase?</h4>
+                        <ul class="space-y-2 text-gray-700 dark:text-gray-300">
+                            <li>✅ Real-time data sync across all devices</li>
+                            <li>✅ Automatic backup and data persistence</li>
+                            <li>✅ Share data with friends instantly</li>
+                            <li>✅ No more data loss from browser clearing</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-xl">
+                        <h4 class="font-bold text-lg mb-4 text-gray-900 dark:text-white">Setup Steps:</h4>
+                        <ol class="space-y-3 text-gray-700 dark:text-gray-300">
+                            <li><strong>1.</strong> Go to <a href="https://console.firebase.google.com" target="_blank" class="text-blue-600 underline">Firebase Console</a></li>
+                            <li><strong>2.</strong> Create a new project called "FooTable"</li>
+                            <li><strong>3.</strong> Add a web app and copy the config</li>
+                            <li><strong>4.</strong> Enable Firestore Database</li>
+                            <li><strong>5.</strong> Paste your config below</li>
+                        </ol>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Firebase Configuration (JSON):</label>
+                        <textarea id="firebaseConfig" rows="8" placeholder="Paste your Firebase config here..." class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 font-mono text-sm"></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex gap-4 mt-10 justify-end">
+                    <button onclick="hideFirebaseSetup()" class="px-8 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105">
+                        Skip for Now
+                    </button>
+                    <button onclick="setupFirebase()" class="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        🔥 Setup Firebase
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include all other modals from original file... -->
+    <!-- (Login, Add Game, Add Player, Players Management, Player Profile modals) -->
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
+                        <span class="text-white text-xl">🔐</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Login</h3>
+                </div>
+                
+                <form id="loginForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">👤 Username:</label>
+                        <input type="text" id="loginUsername" placeholder="Enter username" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🔑 Password:</label>
+                        <input type="password" id="loginPassword" placeholder="Enter password" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div class="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                        <strong>Default Admin:</strong><br>
+                        Username: <code>admin</code><br>
+                        Password: <code>admin123</code>
+                    </div>
+                </form>
+                
+                <div class="flex gap-4 mt-8 justify-end">
+                    <button onclick="hideLogin()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                        Cancel
+                    </button>
+                    <button onclick="login()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        🔓 Login
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Game Modal -->
+    <div id="gameModal" class="fixed inset-0 bg-black/60 backdrop-blur-md hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-3 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
+                        <span class="text-white text-2xl">⚽</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white">Add New Game</h3>
+                </div>
+                
+                <form id="gameForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">📅 Date:</label>
+                        <input type="date" id="gameDate" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">👥 Team 1 Players (comma separated):</label>
+                        <input type="text" id="team1Players" placeholder="John, Mike, Alex" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">👥 Team 2 Players (comma separated):</label>
+                        <input type="text" id="team2Players" placeholder="Sarah, Tom, Lisa" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">🥅 Team 1 Score:</label>
+                            <input type="number" id="score1" min="0" value="0" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">🥅 Team 2 Score:</label>
+                            <input type="number" id="score2" min="0" value="0" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">📍 Location (optional):</label>
+                        <input type="text" id="location" placeholder="Local park" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                    </div>
+
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-8">
+                        <h4 class="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
+                            ⚽ Goals & Assists (optional)
+                        </h4>
+                        
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Team 1 Goals (comma separated):</label>
+                                <input type="text" id="team1Goals" placeholder="John, Mike" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Team 2 Goals (comma separated):</label>
+                                <input type="text" id="team2Goals" placeholder="Sarah, Tom" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6 mt-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Team 1 Assists (comma separated):</label>
+                                <input type="text" id="team1Assists" placeholder="Alex, John" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Team 2 Assists (comma separated):</label>
+                                <input type="text" id="team2Assists" placeholder="Lisa, Sarah" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                
+                <div class="flex gap-4 mt-10 justify-end">
+                    <button onclick="hideAddGameModal()" class="px-8 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105">
+                        Cancel
+                    </button>
+                    <button onclick="addGame()" class="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        🎯 Add Game
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Player Modal -->
+    <div id="playerModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600">
+                        <span class="text-white text-xl">👤</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Add New Player</h3>
+                </div>
+                
+                <form id="playerForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">👤 Player Name (required):</label>
+                        <input type="text" id="playerName" placeholder="Enter player name" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">⚽  Position:</label>
+                        <select id="playerPosition" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="">Select position...</option>
+                            <option value="Goalkeeper">Goalkeeper (GK)</option>
+                            <option value="Defender">Defender (DEF)</option>
+                            <option value="Winger">Winger (WIN)</option>
+                            <option value="Forward">Forward (FWD)</option>
+                            <option value="Universal">Universal (ALL)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🎂 Age (optional):</label>
+                        <input type="number" id="playerAge" placeholder="Enter age" min="16" max="50" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                </form>
+                
+                <div class="flex gap-4 mt-8 justify-end">
+                    <button onclick="hideAddPlayerModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                        Cancel
+                    </button>
+                    <button onclick="addPlayer()" class="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        👤 Add Player
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Players Management Modal -->
+    <div id="playersModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
+                            <span class="text-white text-xl">👥</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Player Management</h3>
+                    </div>
+                    <button onclick="hidePlayersModal()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold">×</button>
+                </div>
+                
+                <div class="mb-6">
+                    <div class="flex gap-4 mb-4">
+                        <input type="text" id="playerSearch" placeholder="Search players..." class="flex-1 p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <select id="positionFilter" class="p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="">All Positions</option>
+                            <option value="Goalkeeper">Goalkeeper</option>
+                            <option value="Defender">Defender</option>
+                            <option value="Winger">Winger</option>
+                            <option value="Forward">Forward</option>
+                            <option value="Universal">Universal</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="max-h-96 overflow-y-auto">
+                    <div id="playersTable" class="grid gap-4">
+                        <!-- Players will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="flex justify-end mt-6">
+                    <button onclick="hidePlayersModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let games = [];
+        let players = [];
+        let users = [];
+        let currentUser = null;
+        let currentEditingPlayer = null;
+        let firebaseInitialized = false;
+        let unsubscribeFunctions = [];
+
+        // Firebase service class
+        class FirebaseService {
+            static async initializeFirebase(config) {
+                try {
+                    console.log('Attempting to initialize Firebase with config:', config);
+                    
+                    // Validate the config
+                    if (!config.apiKey || !config.projectId || config.apiKey === "your-api-key") {
+                        throw new Error('Invalid Firebase config: missing or placeholder values');
+                    }
+                    
+                    // Re-initialize Firebase by reloading the modules with the new config
+                    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+                    const { getFirestore, connectFirestoreEmulator } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                    
+                    // Try to initialize Firebase app
+                    let app;
+                    try {
+                        app = initializeApp(config, 'footable-' + Date.now()); // Use unique name to avoid conflicts
+                    } catch (error) {
+                        if (error.code === 'app/duplicate-app') {
+                            // If app already exists, get it
+                            console.log('Firebase app already exists, using existing app');
+                            const { getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+                            const apps = getApps();
+                            app = apps.length > 0 ? apps[0] : initializeApp(config);
+                        } else {
+                            throw error;
+                        }
+                    }
+                    
+                    const db = getFirestore(app);
+                    
+                    // Test the connection by trying to read from Firestore
+                    const { getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                    
+                    // Try a simple read operation to test the connection
+                    console.log('Testing Firebase connection...');
+                    const testCollection = collection(db, 'test');
+                    await getDocs(testCollection);
+                    console.log('Firebase connection test successful!');
+                    
+                    // Update global Firebase object with all necessary functions
+                    const { addDoc, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                    
+                    window.firebase = { 
+                        db, 
+                        collection, 
+                        addDoc, 
+                        getDocs, 
+                        doc, 
+                        updateDoc, 
+                        deleteDoc, 
+                        query, 
+                        orderBy, 
+                        onSnapshot, 
+                        serverTimestamp 
+                    };
+                    
+                    firebaseInitialized = true;
+                    updateConnectionStatus(true);
+                    
+                    // Setup real-time listeners
+                    this.setupListeners();
+                    
+                    console.log('Firebase initialized successfully!');
+                    return true;
+                } catch (error) {
+                    console.error('Firebase initialization failed:', error);
+                    console.error('Error details:', error.message);
+                    firebaseInitialized = false;
+                    updateConnectionStatus(false);
+                    return false;
+                }
+            }
+
+            static setupListeners() {
+                if (!firebaseInitialized) return;
+
+                // Listen for games changes
+                const gamesQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'games'), 
+                    window.firebase.orderBy('date', 'desc')
+                );
+                
+                const unsubGames = window.firebase.onSnapshot(gamesQuery, (snapshot) => {
+                    games = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updateDisplay();
+                });
+                unsubscribeFunctions.push(unsubGames);
+
+                // Listen for players changes
+                const playersQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'players'), 
+                    window.firebase.orderBy('name')
+                );
+                
+                const unsubPlayers = window.firebase.onSnapshot(playersQuery, (snapshot) => {
+                    players = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updateDisplay();
+                });
+                unsubscribeFunctions.push(unsubPlayers);
+            }
+
+            static async addGame(gameData) {
+                if (!firebaseInitialized) {
+                    // Fallback to localStorage
+                    games.push({ ...gameData, id: Date.now().toString() });
+                    saveToLocalStorage();
+                    return;
+                }
+
+                try {
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'games'), 
+                        { ...gameData, createdAt: window.firebase.serverTimestamp() }
+                    );
+                } catch (error) {
+                    console.error('Error adding game:', error);
+                    // Fallback to localStorage
+                    games.push({ ...gameData, id: Date.now().toString() });
+                    saveToLocalStorage();
+                }
+            }
+
+            static async addPlayer(playerData) {
+                if (!firebaseInitialized) {
+                    // When Firebase is not initialized, the player is already added to the array in addPlayer()
+                    // Just save to localStorage
+                    saveToLocalStorage();
+                    return;
+                }
+
+                try {
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'players'), 
+                        { ...playerData, createdAt: window.firebase.serverTimestamp() }
+                    );
+                } catch (error) {
+                    console.error('Error adding player to Firebase:', error);
+                    // Player is already in local array, just save to localStorage as fallback
+                    saveToLocalStorage();
+                }
+            }
+        }
+
+        // Theme management
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('footable-theme') || 'light';
+            const isDark = savedTheme === 'dark';
+            
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').textContent = '☀️';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').textContent = '🌙';
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            if (isDark) {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').textContent = '🌙';
+                localStorage.setItem('footable-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').textContent = '☀️';
+                localStorage.setItem('footable-theme', 'dark');
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.className = 'w-3 h-3 rounded-full bg-green-500';
+                statusEl.title = 'Connected to Firebase';
+            } else {
+                statusEl.className = 'w-3 h-3 rounded-full bg-red-500';
+                statusEl.title = 'Using Local Storage (Offline)';
+            }
+        }
+
+        function showFirebaseSetup() {
+            document.getElementById('firebaseSetupModal').classList.remove('hidden');
+            document.getElementById('firebaseSetupModal').classList.add('flex');
+        }
+
+        function hideFirebaseSetup() {
+            document.getElementById('firebaseSetupModal').classList.add('hidden');
+            document.getElementById('firebaseSetupModal').classList.remove('flex');
+            document.getElementById('firebaseStatus').classList.remove('hidden');
+        }
+
+        async function setupFirebase() {
+            const configText = document.getElementById('firebaseConfig').value.trim();
+            
+            if (!configText) {
+                alert('Please enter your Firebase configuration');
+                return;
+            }
+
+            try {
+                console.log('Parsing Firebase config...');
+                const config = JSON.parse(configText);
+                
+                // Validate required fields
+                const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
+                const missingFields = requiredFields.filter(field => !config[field] || config[field] === `your-${field}` || config[field] === 'your-api-key');
+                
+                if (missingFields.length > 0) {
+                    alert(`Missing or invalid Firebase configuration fields: ${missingFields.join(', ')}\n\nPlease make sure you copied the complete configuration from Firebase Console.`);
+                    return;
+                }
+                
+                console.log('Config validation passed, attempting Firebase initialization...');
+                const success = await FirebaseService.initializeFirebase(config);
+                
+                if (success) {
+                    localStorage.setItem('footable-firebase-config', configText);
+                    hideFirebaseSetup();
+                    document.getElementById('firebaseStatus').classList.add('hidden');
+                    alert('Firebase connected successfully! 🎉\n\nYou can now add data and it will sync across devices.');
+                } else {
+                    alert('Firebase setup failed. Common issues:\n\n1. Check your internet connection\n2. Verify your Firebase project settings\n3. Make sure Firestore is enabled\n4. Check browser console for detailed errors');
+                }
+            } catch (parseError) {
+                console.error('JSON parsing error:', parseError);
+                alert('Invalid Firebase configuration format. Please check:\n\n1. Make sure you copied the complete JSON object\n2. Remove any JavaScript code (const firebaseConfig = etc.)\n3. Use proper JSON format with quotes around all keys');
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('footable-games', JSON.stringify(games));
+            localStorage.setItem('footable-players', JSON.stringify(players));
+            localStorage.setItem('footable-users', JSON.stringify(users));
+            localStorage.setItem('footable-currentUser', JSON.stringify(currentUser));
+        }
+
+        function loadFromLocalStorage() {
+            games = JSON.parse(localStorage.getItem('footable-games') || '[]');
+            players = JSON.parse(localStorage.getItem('footable-players') || '[]');
+            users = JSON.parse(localStorage.getItem('footable-users') || '[]');
+            currentUser = JSON.parse(localStorage.getItem('footable-currentUser') || 'null');
+        }
+
+        // Initialize default admin user and sample data
+        function initializeDefaultUsers() {
+            if (users.length === 0) {
+                users.push({
+                    id: 'admin-' + Date.now(),
+                    username: 'admin',
+                    password: 'admin123',
+                    isAdmin: true,
+                    createdAt: new Date().toISOString()
+                });
+                saveToLocalStorage();
+            }
+        }
+
+        // Add sample players for testing
+        function initializeSamplePlayers() {
+            console.log('initializeSamplePlayers called, current players length:', players.length);
+            
+            if (players.length === 0) {
+                console.log('No players found, adding sample players...');
+                const samplePlayers = [
+                    { name: 'John Smith', position: 'Forward', age: 25, gamesPlayed: 8, wins: 5, draws: 2, losses: 1, goals: 12, assists: 3 },
+                    { name: 'Mike Johnson', position: 'Defender', age: 28, gamesPlayed: 7, wins: 4, draws: 1, losses: 2, goals: 2, assists: 5 },
+                    { name: 'Dave Wilson', position: 'Winger', age: 23, gamesPlayed: 6, wins: 4, draws: 0, losses: 2, goals: 8, assists: 4 },
+                    { name: 'Tom Brown', position: 'Goalkeeper', age: 30, gamesPlayed: 5, wins: 3, draws: 1, losses: 1, goals: 0, assists: 0 }
+                ];
+
+                samplePlayers.forEach((player, index) => {
+                    const newPlayer = {
+                        id: 'sample-' + Date.now() + '-' + index,
+                        ...player,
+                        createdAt: new Date().toISOString(),
+                        createdBy: 'system'
+                    };
+                    players.push(newPlayer);
+                    console.log('Added sample player:', newPlayer.name);
+                });
+                
+                console.log('Sample players added, new array length:', players.length);
+                saveToLocalStorage();
+                console.log('Sample players saved to localStorage');
+            } else {
+                console.log('Players already exist, skipping sample data creation');
+            }
+        }
+
+        function updateDisplay() {
+            // Update recent games
+            const recentGamesHTML = games.length === 0 
+                ? '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No games yet! Add your first game above. 🎯</p>'
+                : games.slice(-5).reverse().map(game => `
+                    <div class="p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300 hover:shadow-lg dark:hover:shadow-gray-900/20 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-850">
+                        <div class="flex justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            <span class="flex items-center gap-2 font-medium">📅 ${game.date}</span>
+                            <span class="flex items-center gap-2 font-medium">📍 ${game.location}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div class="text-left flex-1">
+                                <div class="font-bold text-gray-900 dark:text-white mb-2">Team 1</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-300 font-medium">${game.team1.join(', ')}</div>
+                            </div>
+                            <div class="text-center px-6">
+                                <div class="font-black text-3xl ${game.score1 > game.score2 ? 'text-green-600 dark:text-green-400' : game.score1 < game.score2 ? 'text-red-500 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'} mb-2">
+                                    ${game.score1} - ${game.score2}
+                                </div>
+                                <div class="text-xs font-semibold ${game.score1 > game.score2 ? 'text-green-600 dark:text-green-400' : game.score1 < game.score2 ? 'text-red-500 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}">
+                                    ${game.score1 > game.score2 ? '🏆 Team 1 Wins!' : game.score1 < game.score2 ? '🏆 Team 2 Wins!' : '🤝 Draw!'}
+                                </div>
+                            </div>
+                            <div class="text-right flex-1">
+                                <div class="font-bold text-gray-900 dark:text-white mb-2">Team 2</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-300 font-medium">${game.team2.join(', ')}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            
+            document.getElementById('recentGames').innerHTML = recentGamesHTML;
+
+            // Update top players
+            const topPlayersHTML = players.length === 0
+                ? '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No player stats yet! 📊</p>'
+                : players.sort((a, b) => {
+                    const aWinRate = getWinPercentage(a);
+                    const bWinRate = getWinPercentage(b);
+                    
+                    if (aWinRate !== bWinRate) {
+                        return bWinRate - aWinRate;
+                    }
+                    
+                    const aGoals = a.goals || 0;
+                    const bGoals = b.goals || 0;
+                    
+                    if (aGoals !== bGoals) {
+                        return bGoals - aGoals;
+                    }
+                    
+                    const aAssists = a.assists || 0;
+                    const bAssists = b.assists || 0;
+                    
+                    if (aAssists !== bAssists) {
+                        return bAssists - aAssists;
+                    }
+                    
+                    return b.gamesPlayed - a.gamesPlayed;
+                }).slice(0, 5).map((player, index) => `
+                    <div class="flex justify-between items-center py-5 px-5 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-lg transition-all duration-300 group">
+                        <div class="flex items-center gap-4">
+                            <div class="relative">
+                                <div class="w-12 h-12 rounded-full ${
+                                    index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg' :
+                                    index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500 shadow-lg' :
+                                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-yellow-700 shadow-lg' :
+                                    'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg'
+                                } flex items-center justify-center text-white font-bold text-lg transition-transform duration-300 group-hover:scale-110">
+                                    ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                                </div>
+                                ${index < 3 ? '<div class="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full animate-pulse"></div>' : ''}
+                            </div>
+                            <div>
+                                <div class="font-bold text-lg text-gray-900 dark:text-white">${player.name}</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                    <span>${player.position || 'Unknown'}</span>
+                                    ${player.age ? '• <span>' + player.age + 'y</span>' : ''}
+                                </div>
+                                <div class="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-3 mt-1">
+                                    <span class="flex items-center gap-1">⚽ ${player.goals || 0}</span>
+                                    <span class="flex items-center gap-1">🅰️ ${player.assists || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-black text-2xl ${getWinPercentage(player) >= 70 ? 'text-green-600 dark:text-green-400' : getWinPercentage(player) >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}">
+                                ${getWinPercentage(player)}%
+                            </div>
+                            <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                <span class="text-green-600 dark:text-green-400">${player.wins}W</span>
+                                <span class="text-yellow-600 dark:text-yellow-400">${player.draws}D</span>
+                                <span class="text-red-500 dark:text-red-400">${player.losses}L</span>
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">${player.gamesPlayed} game${player.gamesPlayed !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+                `).join('');
+            
+            document.getElementById('topPlayers').innerHTML = topPlayersHTML;
+
+            // Update stats
+            document.getElementById('totalGames').textContent = games.length;
+            document.getElementById('totalPlayers').textContent = players.length;
+            
+            const avgGoals = games.length > 0 
+                ? (games.reduce((sum, game) => sum + game.score1 + game.score2, 0) / games.length).toFixed(1)
+                : '0';
+            document.getElementById('avgGoals').textContent = avgGoals;
+        }
+
+        // Placeholder functions for missing features
+        function showLogin() { 
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginModal').classList.add('flex');
+        }
+        
+        function hideLogin() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('flex');
+            document.getElementById('loginForm').reset();
+        }
+
+        function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (!username || !password) {
+                alert('Please enter both username and password');
+                return;
+            }
+
+            const user = users.find(u => u.username === username && u.password === password);
+            if (user) {
+                currentUser = user;
+                saveToLocalStorage();
+                hideLogin();
+                updateUIForUser();
+                alert(`Welcome ${user.isAdmin ? 'Admin' : 'User'}: ${username}!`);
+            } else {
+                alert('Invalid username or password');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            saveToLocalStorage();
+            updateUIForUser();
+        }
+
+        function updateUIForUser() {
+            const userInfo = document.getElementById('userInfo');
+            const loginBtn = document.getElementById('loginBtn');
+            const adminControls = document.getElementById('adminControls');
+
+            if (currentUser) {
+                userInfo.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">
+                            ${currentUser.isAdmin ? '👑' : '👤'}
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-semibold text-gray-900 dark:text-white">${currentUser.username}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">${currentUser.isAdmin ? 'Administrator' : 'User'}</span>
+                        </div>
+                        <button onclick="logout()" class="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors">Logout</button>
+                    </div>
+                `;
+                loginBtn.classList.add('hidden');
+                adminControls.classList.toggle('hidden', !currentUser.isAdmin);
+            } else {
+                userInfo.innerHTML = '';
+                loginBtn.classList.remove('hidden');
+                adminControls.classList.add('hidden');
+            }
+        }
+
+        function showAddGameModal() { 
+            if (!currentUser) {
+                alert('Please login to add games');
+                showLogin();
+                return;
+            }
+            document.getElementById('gameModal').classList.remove('hidden');
+            document.getElementById('gameModal').classList.add('flex');
+            document.getElementById('gameDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        function hideAddGameModal() {
+            document.getElementById('gameModal').classList.add('hidden');
+            document.getElementById('gameModal').classList.remove('flex');
+            document.getElementById('gameForm').reset();
+        }
+
+        function showAddPlayerModal() { 
+            if (!currentUser?.isAdmin) {
+                alert('Only administrators can add players');
+                return;
+            }
+            document.getElementById('playerModal').classList.remove('hidden');
+            document.getElementById('playerModal').classList.add('flex');
+        }
+
+        function hideAddPlayerModal() {
+            document.getElementById('playerModal').classList.add('hidden');
+            document.getElementById('playerModal').classList.remove('flex');
+            document.getElementById('playerForm').reset();
+            
+            // Reset modal to "Add Player" state if it was in edit mode
+            if (currentEditingPlayer) {
+                const modalTitle = document.querySelector('#playerModal h3');
+                modalTitle.innerHTML = '<span class="text-white text-xl">👤</span> Add New Player';
+                
+                const updateButton = document.querySelector('#playerModal button[onclick="updatePlayer()"]');
+                if (updateButton) {
+                    updateButton.innerHTML = '👤 Add Player';
+                    updateButton.setAttribute('onclick', 'addPlayer()');
+                }
+                
+                currentEditingPlayer = null;
+            }
+        }
+
+        function showPlayersModal() { 
+            if (!currentUser?.isAdmin) {
+                alert('Only administrators can manage players');
+                return;
+            }
+            
+            document.getElementById('playersModal').classList.remove('hidden');
+            document.getElementById('playersModal').classList.add('flex');
+            populatePlayersTable();
+        }
+
+        function addGame() {
+            const date = document.getElementById('gameDate').value;
+            const team1PlayersStr = document.getElementById('team1Players').value.trim();
+            const team2PlayersStr = document.getElementById('team2Players').value.trim();
+            const score1 = parseInt(document.getElementById('score1').value);
+            const score2 = parseInt(document.getElementById('score2').value);
+            const location = document.getElementById('location').value.trim() || 'Unknown';
+
+            const team1Goals = document.getElementById('team1Goals').value.trim();
+            const team1Assists = document.getElementById('team1Assists').value.trim();
+            const team2Goals = document.getElementById('team2Goals').value.trim();
+            const team2Assists = document.getElementById('team2Assists').value.trim();
+
+            if (!date || !team1PlayersStr || !team2PlayersStr || isNaN(score1) || isNaN(score2)) {
+                alert('Please fill all required fields');
+                return;
+            }
+
+            const team1 = team1PlayersStr.split(',').map(name => name.trim()).filter(name => name);
+            const team2 = team2PlayersStr.split(',').map(name => name.trim()).filter(name => name);
+
+            const game = {
+                id: Date.now().toString(),
+                date,
+                team1,
+                team2,
+                score1,
+                score2,
+                location,
+                team1Goals: team1Goals ? team1Goals.split(',').map(name => name.trim()) : [],
+                team1Assists: team1Assists ? team1Assists.split(',').map(name => name.trim()) : [],
+                team2Goals: team2Goals ? team2Goals.split(',').map(name => name.trim()) : [],
+                team2Assists: team2Assists ? team2Assists.split(',').map(name => name.trim()) : [],
+                addedBy: currentUser.username,
+                addedAt: new Date().toISOString()
+            };
+
+            // Use Firebase service to add game
+            FirebaseService.addGame(game);
+            
+            // Update player statistics
+            updatePlayerStats(game);
+            
+            saveToLocalStorage();
+            updateDisplay();
+            hideAddGameModal();
+            alert('Game added successfully!');
+        }
+
+        function addPlayer() {
+            const name = document.getElementById('playerName').value.trim();
+            const position = document.getElementById('playerPosition').value.trim();
+            const age = document.getElementById('playerAge').value.trim();
+
+            if (!name) {
+                alert('Player name is required');
+                return;
+            }
+
+            if (!position) {
+                alert('Position is required');
+                return;
+            }
+
+            if (players.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+                alert('Player already exists');
+                return;
+            }
+
+            const newPlayer = {
+                id: Date.now() + Math.random(),
+                name: name,
+                position: position,
+                age: age ? parseInt(age) : null,
+                gamesPlayed: 0,
+                wins: 0,
+                draws: 0,
+                losses: 0,
+                goals: 0,
+                assists: 0,
+                createdAt: new Date().toISOString(),
+                createdBy: currentUser.username
+            };
+
+            // Add to players array
+            players.push(newPlayer);
+
+            // Use Firebase service to add player (this handles both Firebase and localStorage)
+            FirebaseService.addPlayer(newPlayer);
+            
+            saveToLocalStorage();
+            updateDisplay();
+            hideAddPlayerModal();
+            alert(`Player ${name} added successfully as ${position}!`);
+        }
+
+        function hidePlayersModal() {
+            document.getElementById('playersModal').classList.add('hidden');
+            document.getElementById('playersModal').classList.remove('flex');
+        }
+
+        function populatePlayersTable() {
+            const playersTable = document.getElementById('playersTable');
+            
+            if (players.length === 0) {
+                playersTable.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 col-span-full">No players found.</p>';
+                return;
+            }
+
+            const playersHTML = players.map(player => {
+                const winRate = getWinPercentage(player);
+                const goalsPerGame = player.gamesPlayed > 0 ? (player.goals / player.gamesPlayed).toFixed(1) : '0.0';
+                
+                return `
+                    <div class="bg-white dark:bg-gray-700 rounded-xl p-6 border-2 border-gray-100 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="text-xl font-bold text-gray-900 dark:text-white">${player.name}</h4>
+                                <p class="text-gray-600 dark:text-gray-400">${player.position || 'Unknown'}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-500">${player.age ? player.age + ' years old' : 'Age not specified'}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
+                                    ${winRate}%
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-4 gap-4 text-center">
+                            <div>
+                                <div class="text-lg font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-green-600 dark:text-green-400">⚽${player.goals || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Goals</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-purple-600 dark:text-purple-400">🅰️${player.assists || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Assists</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-orange-600 dark:text-orange-400">${goalsPerGame}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">G/Game</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 flex justify-between items-center">
+                            <div class="text-xs text-gray-400 dark:text-gray-500">
+                                <div>Created: ${new Date(player.createdAt).toLocaleDateString()}</div>
+                                <div>By: ${player.createdBy}</div>
+                                <div class="mt-1">
+                                    <span class="text-green-600 dark:text-green-400">${player.wins}W</span> • 
+                                    <span class="text-yellow-600 dark:text-yellow-400">${player.draws}D</span> • 
+                                    <span class="text-red-500 dark:text-red-400">${player.losses}L</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="editPlayer('${player.id}')" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="deletePlayer('${player.id}')" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            playersTable.innerHTML = playersHTML;
+        }
+
+        function editPlayer(playerId) {
+            const player = players.find(p => p.id == playerId);
+            if (!player) {
+                alert('Player not found!');
+                return;
+            }
+
+            currentEditingPlayer = player;
+            
+            // Populate the form with current player data
+            document.getElementById('playerName').value = player.name;
+            document.getElementById('playerPosition').value = player.position || '';
+            document.getElementById('playerAge').value = player.age || '';
+            
+            // Change modal title and button text
+            const modalTitle = document.querySelector('#playerModal h3');
+            modalTitle.innerHTML = '<span class="text-white text-xl">✏️</span> Edit Player';
+            
+            const addButton = document.querySelector('#playerModal button[onclick="addPlayer()"]');
+            addButton.innerHTML = '✏️ Update Player';
+            addButton.setAttribute('onclick', 'updatePlayer()');
+            
+            showAddPlayerModal();
+        }
+
+        function updatePlayer() {
+            if (!currentEditingPlayer) {
+                alert('No player selected for editing');
+                return;
+            }
+
+            const name = document.getElementById('playerName').value.trim();
+            const position = document.getElementById('playerPosition').value.trim();
+            const age = document.getElementById('playerAge').value.trim();
+
+            if (!name) {
+                alert('Player name is required');
+                return;
+            }
+
+            if (!position) {
+                alert('Position is required');
+                return;
+            }
+
+            // Check if name already exists for other players
+            const existingPlayer = players.find(p => p.name.toLowerCase() === name.toLowerCase() && p.id !== currentEditingPlayer.id);
+            if (existingPlayer) {
+                alert('Another player with this name already exists');
+                return;
+            }
+
+            // Update player data
+            currentEditingPlayer.name = name;
+            currentEditingPlayer.position = position;
+            currentEditingPlayer.age = age ? parseInt(age) : null;
+
+            saveToLocalStorage();
+            updateDisplay();
+            hideAddPlayerModal();
+            populatePlayersTable(); // Refresh the players table
+            
+            // Reset modal for next use
+            const modalTitle = document.querySelector('#playerModal h3');
+            modalTitle.innerHTML = '<span class="text-white text-xl">👤</span> Add New Player';
+            
+            const updateButton = document.querySelector('#playerModal button[onclick="updatePlayer()"]');
+            updateButton.innerHTML = '👤 Add Player';
+            updateButton.setAttribute('onclick', 'addPlayer()');
+            
+            currentEditingPlayer = null;
+            alert(`Player ${name} updated successfully!`);
+        }
+
+        function deletePlayer(playerId) {
+            const player = players.find(p => p.id == playerId);
+            if (!player) {
+                alert('Player not found!');
+                return;
+            }
+
+            const confirmDelete = confirm(`Are you sure you want to delete player "${player.name}"?\n\nThis will also remove all their game statistics.\n\nThis action cannot be undone.`);
+            
+            if (confirmDelete) {
+                // Remove player from array
+                const playerIndex = players.findIndex(p => p.id == playerId);
+                if (playerIndex > -1) {
+                    players.splice(playerIndex, 1);
+                    
+                    saveToLocalStorage();
+                    updateDisplay();
+                    populatePlayersTable(); // Refresh the players table
+                    alert(`Player "${player.name}" has been deleted successfully.`);
+                }
+            }
+        }
+
+        function filterAndSearchPlayers() {
+            const searchTerm = document.getElementById('playerSearch').value.toLowerCase();
+            const positionFilter = document.getElementById('positionFilter').value;
+            
+            let filteredPlayers = players;
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredPlayers = filteredPlayers.filter(player => 
+                    player.name.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Apply position filter
+            if (positionFilter) {
+                filteredPlayers = filteredPlayers.filter(player => 
+                    player.position === positionFilter
+                );
+            }
+            
+            // Update the display with filtered players
+            const playersTable = document.getElementById('playersTable');
+            
+            if (filteredPlayers.length === 0) {
+                playersTable.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 col-span-full">No players found matching your search.</p>';
+                return;
+            }
+
+            const playersHTML = filteredPlayers.map(player => {
+                const winRate = getWinPercentage(player);
+                const goalsPerGame = player.gamesPlayed > 0 ? (player.goals / player.gamesPlayed).toFixed(1) : '0.0';
+                
+                return `
+                    <div class="bg-white dark:bg-gray-700 rounded-xl p-6 border-2 border-gray-100 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="text-xl font-bold text-gray-900 dark:text-white">${player.name}</h4>
+                                <p class="text-gray-600 dark:text-gray-400">${player.position || 'Unknown'}</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-500">${player.age ? player.age + ' years old' : 'Age not specified'}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
+                                    ${winRate}%
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-4 gap-4 text-center">
+                            <div>
+                                <div class="text-lg font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-green-600 dark:text-green-400">⚽${player.goals || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Goals</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-purple-600 dark:text-purple-400">🅰️${player.assists || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Assists</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-orange-600 dark:text-orange-400">${goalsPerGame}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">G/Game</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 flex justify-between items-center">
+                            <div class="text-xs text-gray-400 dark:text-gray-500">
+                                <div>Created: ${new Date(player.createdAt).toLocaleDateString()}</div>
+                                <div>By: ${player.createdBy}</div>
+                                <div class="mt-1">
+                                    <span class="text-green-600 dark:text-green-400">${player.wins}W</span> • 
+                                    <span class="text-yellow-600 dark:text-yellow-400">${player.draws}D</span> • 
+                                    <span class="text-red-500 dark:text-red-400">${player.losses}L</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="editPlayer('${player.id}')" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="deletePlayer('${player.id}')" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            playersTable.innerHTML = playersHTML;
+        }
+
+        function updatePlayerStats(game) {
+            const allPlayers = [...game.team1, ...game.team2];
+            
+            allPlayers.forEach(playerName => {
+                let player = players.find(p => p.name === playerName);
+                if (!player) {
+                    // Auto-create player if not exists
+                    player = {
+                        id: Date.now() + Math.random(),
+                        name: playerName,
+                        position: 'Unknown',
+                        age: null,
+                        gamesPlayed: 0,
+                        wins: 0,
+                        draws: 0,
+                        losses: 0,
+                        goals: 0,
+                        assists: 0,
+                        createdAt: new Date().toISOString(),
+                        createdBy: 'auto-generated'
+                    };
+                    players.push(player);
+                }
+
+                player.gamesPlayed++;
+                
+                // Update win/draw/loss
+                if (game.score1 === game.score2) {
+                    player.draws++;
+                } else if (
+                    (game.team1.includes(playerName) && game.score1 > game.score2) ||
+                    (game.team2.includes(playerName) && game.score2 > game.score1)
+                ) {
+                    player.wins++;
+                } else {
+                    player.losses++;
+                }
+
+                // Update goals
+                const goalCount = [...game.team1Goals, ...game.team2Goals].filter(name => name === playerName).length;
+                player.goals += goalCount;
+
+                // Update assists
+                const assistCount = [...game.team1Assists, ...game.team2Assists].filter(name => name === playerName).length;
+                player.assists += assistCount;
+            });
+        }
+
+        function getWinPercentage(player) {
+            if (player.gamesPlayed === 0) return 0;
+            return Math.round((player.wins / player.gamesPlayed) * 100);
+        }
+
+        // Migration function to move localStorage data to Firebase
+        async function migrateLocalStorageToFirebase() {
+            if (!firebaseInitialized) {
+                alert('Please setup Firebase first before migrating data!');
+                return;
+            }
+
+            try {
+                console.log('Starting migration from localStorage to Firebase...');
+                
+                // Get data from localStorage (using footable prefix)
+                const localGames = JSON.parse(localStorage.getItem('footable-games') || '[]');
+                const localPlayers = JSON.parse(localStorage.getItem('footable-players') || '[]');
+                const localUsers = JSON.parse(localStorage.getItem('footable-users') || '[]');
+
+                console.log(`Found ${localGames.length} games, ${localPlayers.length} players, ${localUsers.length} users to migrate`);
+
+                if (localGames.length === 0 && localPlayers.length === 0 && localUsers.length === 0) {
+                    alert('No data found in localStorage to migrate.');
+                    return;
+                }
+
+                let migrated = { games: 0, players: 0, users: 0 };
+
+                // Migrate users first
+                for (const user of localUsers) {
+                    try {
+                        const userData = {
+                            username: user.username,
+                            password: user.password,
+                            isAdmin: user.isAdmin || false,
+                            originalId: user.id,
+                            migratedAt: new Date().toISOString(),
+                            migratedFrom: 'localStorage'
+                        };
+                        
+                        await window.firebase.addDoc(
+                            window.firebase.collection(window.firebase.db, 'users'), 
+                            userData
+                        );
+                        migrated.users++;
+                        console.log(`Migrated user: ${user.username}`);
+                    } catch (error) {
+                        console.error(`Failed to migrate user ${user.username}:`, error);
+                    }
+                }
+
+                // Migrate players
+                for (const player of localPlayers) {
+                    try {
+                        const playerData = {
+                            name: player.name,
+                            position: player.position || 'Unknown',
+                            age: player.age || null,
+                            gamesPlayed: player.gamesPlayed || 0,
+                            wins: player.wins || 0,
+                            draws: player.draws || 0,
+                            losses: player.losses || 0,
+                            goals: player.goals || 0,
+                            assists: player.assists || 0,
+                            createdBy: player.createdBy || 'migration',
+                            originalId: player.id,
+                            migratedAt: new Date().toISOString(),
+                            migratedFrom: 'localStorage'
+                        };
+                        
+                        await window.firebase.addDoc(
+                            window.firebase.collection(window.firebase.db, 'players'), 
+                            playerData
+                        );
+                        migrated.players++;
+                        console.log(`Migrated player: ${player.name}`);
+                    } catch (error) {
+                        console.error(`Failed to migrate player ${player.name}:`, error);
+                    }
+                }
+
+                // Migrate games
+                for (const game of localGames) {
+                    try {
+                        const gameData = {
+                            date: game.date,
+                            team1: game.team1 || [],
+                            team2: game.team2 || [],
+                            score1: game.score1 || 0,
+                            score2: game.score2 || 0,
+                            location: game.location || 'Unknown',
+                            team1Goals: game.team1Goals || [],
+                            team1Assists: game.team1Assists || [],
+                            team2Goals: game.team2Goals || [],
+                            team2Assists: game.team2Assists || [],
+                            addedBy: game.addedBy || 'migration',
+                            originalId: game.id,
+                            migratedAt: new Date().toISOString(),
+                            migratedFrom: 'localStorage'
+                        };
+                        
+                        await window.firebase.addDoc(
+                            window.firebase.collection(window.firebase.db, 'games'), 
+                            gameData
+                        );
+                        migrated.games++;
+                        console.log(`Migrated game from ${game.date}`);
+                    } catch (error) {
+                        console.error(`Failed to migrate game from ${game.date}:`, error);
+                    }
+                }
+
+                // Create backup of localStorage data
+                const backupData = {
+                    games: localGames,
+                    players: localPlayers,
+                    users: localUsers,
+                    migratedAt: new Date().toISOString()
+                };
+                localStorage.setItem('footable-backup', JSON.stringify(backupData));
+
+                alert(`Migration completed! ✅\nMigrated: ${migrated.games} games, ${migrated.players} players, ${migrated.users} users\n\nYour original data has been backed up in localStorage as 'footable-backup'.`);
+                
+                console.log('Migration completed successfully!', migrated);
+                return migrated;
+
+            } catch (error) {
+                console.error('Migration failed:', error);
+                alert(`Migration failed: ${error.message}\n\nCheck the browser console for details.`);
+                return null;
+            }
+        }
+
+        // Clear localStorage after successful migration
+        async function clearLocalStorageAfterMigration() {
+            if (confirm('Are you sure you want to clear localStorage? This will remove all local data (backup will remain).')) {
+                const keys = ['footable-games', 'footable-players', 'footable-users', 'footable-currentUser'];
+                keys.forEach(key => localStorage.removeItem(key));
+                alert('localStorage cleared! Your app now uses Firebase exclusively.');
+                location.reload(); // Refresh to load from Firebase
+            }
+        }
+
+        // Debug function to reset all data and reinitialize
+        function resetAllData() {
+            if (confirm('This will clear ALL data and reinitialize with fresh sample data. Are you sure?')) {
+                // Clear all data
+                games = [];
+                players = [];
+                users = [];
+                currentUser = null;
+                
+                // Clear localStorage
+                ['footable-games', 'footable-players', 'footable-users', 'footable-currentUser'].forEach(key => {
+                    localStorage.removeItem(key);
+                });
+                
+                // Reinitialize
+                initializeDefaultUsers();
+                initializeSamplePlayers();
+                updateUIForUser();
+                updateDisplay();
+                
+                console.log('All data reset and reinitialized');
+                alert('Data reset complete! Sample players and admin user have been recreated.');
+            }
+        }
+
+        // Debug function to inspect localStorage
+        function inspectLocalStorage() {
+            console.log('=== localStorage Inspection ===');
+            console.log('Origin:', window.location.origin);
+            console.log('Protocol:', window.location.protocol);
+            console.log('Host:', window.location.host);
+            console.log();
+            
+            const keys = ['footable-games', 'footable-players', 'footable-users', 'footable-currentUser'];
+            keys.forEach(key => {
+                const value = localStorage.getItem(key);
+                console.log(`${key}:`, value ? JSON.parse(value) : 'null');
+            });
+            
+            console.log();
+            console.log('Current in-memory arrays:');
+            console.log('games:', games);
+            console.log('players:', players);
+            console.log('users:', users);
+            console.log('currentUser:', currentUser);
+            console.log('=== End Inspection ===');
+        }
+
+        // Make functions available globally for console debugging
+        window.resetAllData = resetAllData;
+        window.inspectLocalStorage = inspectLocalStorage;
+
+        // Initialize app
+        async function initializeApp() {
+            console.log('Initializing FooTable app...');
+            console.log('Current URL origin:', window.location.origin);
+            console.log('Current protocol:', window.location.protocol);
+            
+            initializeTheme();
+            loadFromLocalStorage();
+            
+            // Debug localStorage content
+            console.log('Current localStorage contents:');
+            console.log('- Games:', localStorage.getItem('footable-games'));
+            console.log('- Players:', localStorage.getItem('footable-players'));
+            console.log('- Users:', localStorage.getItem('footable-users'));
+            console.log('- Players array length after load:', players.length);
+            
+            initializeDefaultUsers();
+            initializeSamplePlayers();
+            
+            console.log('- Players array length after sample init:', players.length);
+            
+            updateUIForUser();
+            updateDisplay();
+            
+            // Start with offline status
+            updateConnectionStatus(false);
+
+            // Try to auto-initialize Firebase if config exists
+            const savedConfig = localStorage.getItem('footable-firebase-config');
+            if (savedConfig) {
+                console.log('Found saved Firebase config, attempting to connect...');
+                try {
+                    const config = JSON.parse(savedConfig);
+                    const success = await FirebaseService.initializeFirebase(config);
+                    if (!success) {
+                        console.log('Firebase connection failed - showing setup banner');
+                        document.getElementById('firebaseStatus').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error('Auto-initialization failed:', error);
+                    document.getElementById('firebaseStatus').classList.remove('hidden');
+                }
+            } else {
+                console.log('No saved Firebase config found - showing setup banner');
+                document.getElementById('firebaseStatus').classList.remove('hidden');
+            }
+            
+            console.log('App initialization complete. firebaseInitialized =', firebaseInitialized);
+        }
+
+        // Initialize event listeners
+        function initializeEventListeners() {
+            // Close modals when clicking outside
+            document.getElementById('firebaseSetupModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideFirebaseSetup();
+                }
+            });
+
+            document.getElementById('loginModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideLogin();
+                }
+            });
+
+            document.getElementById('gameModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideAddGameModal();
+                }
+            });
+
+            document.getElementById('playerModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideAddPlayerModal();
+                }
+            });
+
+            document.getElementById('playersModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hidePlayersModal();
+                }
+            });
+
+            // Allow Enter key to submit forms
+            const loginPasswordInput = document.getElementById('loginPassword');
+            if (loginPasswordInput) {
+                loginPasswordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        login();
+                    }
+                });
+            }
+
+            // Add search and filter functionality for players
+            const playerSearchInput = document.getElementById('playerSearch');
+            const positionFilterSelect = document.getElementById('positionFilter');
+            
+            if (playerSearchInput) {
+                playerSearchInput.addEventListener('input', filterAndSearchPlayers);
+            }
+            
+            if (positionFilterSelect) {
+                positionFilterSelect.addEventListener('change', filterAndSearchPlayers);
+            }
+        }
+
+        // Start the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            initializeEventListeners();
+        });
+    </script>
+</body>
+</html>

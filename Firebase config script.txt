@@ -1,0 +1,22 @@
+Firebase config script
+
+
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDEJfOfMcYQZ54BnwwK_Kk_1T0jBKCKoo0",
+    authDomain: "footable-2025.firebaseapp.com",
+    projectId: "footable-2025",
+    storageBucket: "footable-2025.firebasestorage.app",
+    messagingSenderId: "760639912370",
+    appId: "1:760639912370:web:0e40d42298eaf1ce21ccab"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
