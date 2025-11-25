@@ -178,8 +178,8 @@ export default function Home() {
               cursor: 'pointer',
               transition: 'background-color 0.2s'
             }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
+            onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#059669'}
+            onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#10b981'}
           >
             ➕ Add New Game
           </button>
