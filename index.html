@@ -198,6 +198,9 @@
                 <button onclick="switchDashboardTab('topPlayers')" id="tab-topPlayers" class="dashboard-tab active px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg">
                     🏆 Top Players
                 </button>
+                <button onclick="switchDashboardTab('allPlayers')" id="tab-allPlayers" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
+                    👥 All Players
+                </button>
                 <button onclick="switchDashboardTab('monthly')" id="tab-monthly" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
                     🌟 Monthly Awards
                 </button>
@@ -252,6 +255,19 @@
                     </div>
                     <div id="calendarView" class="space-y-4">
                         <p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">No scheduled games yet! 📅</p>
+                    </div>
+                </div>
+
+                <!-- All Players Tab -->
+                <div id="content-allPlayers" class="dashboard-content hidden">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="p-3 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 shadow-lg">
+                            <span class="text-white text-2xl">👥</span>
+                        </div>
+                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">All Players</h3>
+                    </div>
+                    <div id="allPlayersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg col-span-full">Loading players... 👤</p>
                     </div>
                 </div>
 
@@ -1494,6 +1510,11 @@
             
             // Show selected content
             document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            
+            // Refresh data based on tab
+            if (tabName === 'allPlayers') {
+                displayAllPlayers();
+            }
         }
 
         function updateDisplay() {
@@ -1559,13 +1580,15 @@
                     }
                     
                     return b.gamesPlayed - a.gamesPlayed;
-                }).slice(0, 5).map((player, index) => `
+                }).slice(0, 5).map((player, index) => {
+                    const xpProgress = getXpForNextLevel(player.xp || 0);
+                    return `
                     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6 px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-lg transition-all duration-300 group gap-4">
                         <div class="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
                             <div class="relative flex-shrink-0">
                                 <svg class="absolute -inset-1 w-14 h-14 sm:w-14 sm:h-14" viewBox="0 0 100 100">
                                     <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="4" class="text-gray-200 dark:text-gray-700"/>
-                                    <circle cx="50" cy="50" r="48" fill="none" stroke="url(#levelGradient_${player.id})" stroke-width="4" stroke-dasharray="${(calculateLevel(player.xp || 0) / 100) * 301.59} 301.59" stroke-linecap="round" transform="rotate(-90 50 50)" class="transition-all duration-500"/>
+                                    <circle cx="50" cy="50" r="48" fill="none" stroke="url(#levelGradient_${player.id})" stroke-width="4" stroke-dasharray="${(xpProgress.percentage / 100) * 301.59} 301.59" stroke-linecap="round" transform="rotate(-90 50 50)" class="transition-all duration-500"/>
                                     <defs>
                                         <linearGradient id="levelGradient_${player.id}" x1="0%" y1="0%" x2="100%" y2="100%">
                                             <stop offset="0%" style="stop-color:rgb(168,85,247);stop-opacity:1" />
@@ -1633,7 +1656,8 @@
                             </div>
                         </div>
                     </div>
-                `).join('');
+                `;
+                }).join('');
             
             document.getElementById('topPlayers').innerHTML = topPlayersHTML;
 
@@ -2594,6 +2618,65 @@
                 console.error('Error deleting game:', error);
                 alert('Failed to delete game: ' + error.message);
             }
+        }
+
+        function displayAllPlayers() {
+            const grid = document.getElementById('allPlayersGrid');
+            
+            if (!players || players.length === 0) {
+                grid.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg col-span-full">No players registered yet 👤</p>';
+                return;
+            }
+            
+            // Sort players alphabetically by name
+            const sortedPlayers = [...players].sort((a, b) => a.name.localeCompare(b.name));
+            
+            grid.innerHTML = sortedPlayers.map(player => {
+                const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name) + '&background=random&size=200';
+                const winRate = getWinPercentage(player);
+                const totalGames = (player.wins || 0) + (player.draws || 0) + (player.losses || 0);
+                
+                const xpProgress = getXpForNextLevel(player.xp || 0);
+                
+                return `
+                    <div onclick="showPlayerProfile('${player.id}')" class="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500">
+                        <div class="flex flex-col items-center text-center">
+                            <div class="relative mb-4">
+                                <svg class="absolute -inset-1 w-[104px] h-[104px]" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="4" class="text-gray-200 dark:text-gray-700"/>
+                                    <circle cx="50" cy="50" r="48" fill="none" stroke="url(#levelGradient_all_${player.id})" stroke-width="4" stroke-dasharray="${(xpProgress.percentage / 100) * 301.59} 301.59" stroke-linecap="round" transform="rotate(-90 50 50)" class="transition-all duration-500"/>
+                                    <defs>
+                                        <linearGradient id="levelGradient_all_${player.id}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:rgb(168,85,247);stop-opacity:1" />
+                                            <stop offset="100%" style="stop-color:rgb(236,72,153);stop-opacity:1" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                <img src="${photoUrl}" alt="${player.name}" class="w-24 h-24 rounded-full object-cover border-4 border-gray-200 dark:border-gray-600">
+                                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
+                                    ${calculateLevel(player.xp || 0)}
+                                </div>
+                            </div>
+                            <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">${player.name}</h4>
+                            ${player.phoneNumber ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-2">📱 ${player.phoneNumber}</p>` : ''}
+                            <div class="flex gap-4 mt-4 text-center">
+                                <div class="flex-1">
+                                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${totalGames}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-2xl font-bold text-green-600 dark:text-green-400">${player.wins || 0}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Wins</div>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${winRate}%</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function updateCalendarDisplay() {
