@@ -941,13 +941,6 @@
             }
         }
 
-        // Add sample players for testing (only when no players exist)
-        function initializeSamplePlayers() {
-            // Sample players functionality disabled - only real players will be shown
-            // This ensures a clean start with only database players or manually added ones
-            console.log('Sample players initialization skipped');
-        }
-
         function updateDisplay() {
             // Update recent games
             const recentGamesHTML = games.length === 0 
@@ -2638,32 +2631,6 @@
             }
         }
 
-        // Debug function to reset all data and reinitialize
-        function resetAllData() {
-            if (confirm('This will clear ALL data and reinitialize with fresh sample data. Are you sure?')) {
-                // Clear all data
-                games = [];
-                players = [];
-                users = [];
-                currentUser = null;
-                
-                // Clear localStorage
-                ['footable-games', 'footable-players', 'footable-users', 'footable-currentUser'].forEach(key => {
-                    localStorage.removeItem(key);
-                });
-                
-                // Reinitialize
-                initializeDefaultUsers();
-                initializeSamplePlayers();
-                updateUIForUser();
-                updateDisplay();
-                
-                console.log('All data reset and reinitialized');
-                alert('Data reset complete! Sample players and admin user have been recreated.');
-            }
-        }
-
-        // Debug function to inspect localStorage (available in console as inspectLocalStorage())
         function inspectLocalStorage() {
             console.log('=== localStorage Inspection ===');
             console.log('Origin:', window.location.origin);
@@ -2686,17 +2653,12 @@
             console.log('=== End Inspection ===');
         }
 
-        // Make debug function available for console debugging only
-        window.inspectLocalStorage = inspectLocalStorage;
-
-        // Initialize app
         async function initializeApp() {
             console.log('Initializing FooTable app...');
             
             initializeTheme();
             loadFromLocalStorage();
             initializeDefaultUsers();
-            initializeSamplePlayers();
             updateUIForUser();
             updateDisplay();
             
