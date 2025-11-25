@@ -41,6 +41,7 @@
         // Import Firebase modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         
         // Initialize Firebase (you'll need to replace with your config)
         const firebaseConfig = {
@@ -57,9 +58,10 @@
         if (firebaseConfig.apiKey !== "your-api-key") {
             const app = initializeApp(firebaseConfig);
             const db = getFirestore(app);
+            const auth = getAuth(app);
 
             // Make Firebase available globally
-            window.firebase = { db, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp };
+            window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged };
         } else {
             console.log('Firebase config contains placeholder values - Firebase not initialized');
         }
@@ -333,19 +335,19 @@
                 
                 <form id="loginForm" class="space-y-6">
                     <div>
-                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">👤 Username:</label>
-                        <input type="text" id="loginUsername" placeholder="Enter username" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📧 Email:</label>
+                        <input type="email" id="loginUsername" placeholder="Enter your email" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     
                     <div>
                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🔑 Password:</label>
-                        <input type="password" id="loginPassword" placeholder="Enter password" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <input type="password" id="loginPassword" placeholder="Enter password (min 6 characters)" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
 
                     <div class="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                        <strong>Default Admin:</strong><br>
-                        Username: <code>admin</code><br>
-                        Password: <code>admin123</code>
+                        <strong>New user?</strong> Enter your email and password to create an account.<br>
+                        <strong>Existing user?</strong> Login with your credentials.<br>
+                        <span class="text-xs mt-1 block">Secured by Firebase Authentication 🔒</span>
                     </div>
                 </form>
                 
@@ -901,11 +903,12 @@
                 
                 if (success) {
                     localStorage.setItem('footable-firebase-config', configText);
+                    setupAuthListener();
                     hideFirebaseSetup();
                     document.getElementById('firebaseStatus').classList.add('hidden');
-                    alert('Firebase connected successfully! 🎉\n\nYou can now add data and it will sync across devices.');
+                    alert('Firebase connected successfully! 🎉\n\nYou can now login securely and your data will sync across devices.');
                 } else {
-                    alert('Firebase setup failed. Common issues:\n\n1. Check your internet connection\n2. Verify your Firebase project settings\n3. Make sure Firestore is enabled\n4. Check browser console for detailed errors');
+                    alert('Firebase setup failed. Common issues:\n\n1. Check your internet connection\n2. Verify your Firebase project settings\n3. Make sure Firestore AND Authentication are enabled\n4. Check browser console for detailed errors');
                 }
             } catch (parseError) {
                 console.error('JSON parsing error:', parseError);
@@ -1280,45 +1283,88 @@
             document.getElementById('loginForm').reset();
         }
 
-        function login() {
-            const username = document.getElementById('loginUsername').value.trim();
+        async function login() {
+            const email = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
 
-            if (!username || !password) {
-                alert('Please enter both username and password');
+            if (!email || !password) {
+                alert('Please enter both email and password');
                 return;
             }
 
-            const user = users.find(u => u.username === username && u.password === password);
-            if (user) {
-                currentUser = user;
-                saveToLocalStorage();
+            if (!firebaseInitialized) {
+                alert('Please setup Firebase first!');
+                return;
+            }
+
+            try {
+                const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
+                console.log('Logged in successfully:', userCredential.user.email);
                 hideLogin();
-                updateUIForUser();
-                alert(`Welcome ${user.isAdmin ? 'Admin' : 'User'}: ${username}!`);
-            } else {
-                alert('Invalid username or password');
+            } catch (error) {
+                console.error('Login error:', error);
+                if (error.code === 'auth/user-not-found') {
+                    if (confirm('Account not found. Create new account with this email?')) {
+                        await createAccount();
+                    }
+                } else if (error.code === 'auth/wrong-password') {
+                    alert('Incorrect password');
+                } else if (error.code === 'auth/invalid-email') {
+                    alert('Invalid email format');
+                } else {
+                    alert('Login failed: ' + error.message);
+                }
             }
         }
 
-        function logout() {
-            if (currentUser && currentUser.isPlayer) {
-                // Player logout - just remove player-specific data
-                delete currentUser.playerId;
-                delete currentUser.playerName;
-                delete currentUser.isPlayer;
-                
-                // If no admin login either, set to null
-                if (!currentUser.username) {
-                    currentUser = null;
-                }
-            } else {
-                // Admin/regular logout
-                currentUser = null;
+        async function createAccount() {
+            const email = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (password.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
             }
-            
-            saveToLocalStorage();
-            updateUIForUser();
+
+            try {
+                const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, password);
+                console.log('Account created:', userCredential.user.email);
+                
+                await window.firebase.addDoc(
+                    window.firebase.collection(window.firebase.db, 'users'),
+                    {
+                        email: email,
+                        isAdmin: false,
+                        createdAt: window.firebase.serverTimestamp()
+                    }
+                );
+                
+                alert('Account created successfully! You are now logged in.');
+                hideLogin();
+            } catch (error) {
+                console.error('Account creation error:', error);
+                alert('Failed to create account: ' + error.message);
+            }
+        }
+
+        async function logout() {
+            if (!firebaseInitialized) {
+                currentUser = null;
+                saveToLocalStorage();
+                updateUIForUser();
+                return;
+            }
+
+            try {
+                await window.firebase.signOut(window.firebase.auth);
+                currentUser = null;
+                saveToLocalStorage();
+                updateUIForUser();
+                console.log('Logged out successfully');
+            } catch (error) {
+                console.error('Logout error:', error);
+                alert('Logout failed: ' + error.message);
+            }
         }
 
         function updateUIForUser() {
@@ -2675,6 +2721,8 @@
                     if (!success) {
                         console.log('Firebase connection failed - showing setup banner');
                         document.getElementById('firebaseStatus').classList.remove('hidden');
+                    } else {
+                        setupAuthListener();
                     }
                 } catch (error) {
                     console.error('Auto-initialization failed:', error);
@@ -2686,6 +2734,44 @@
             }
             
             console.log('App initialization complete. firebaseInitialized =', firebaseInitialized);
+        }
+
+        function setupAuthListener() {
+            if (!firebaseInitialized || !window.firebase.auth) return;
+
+            window.firebase.onAuthStateChanged(window.firebase.auth, async (user) => {
+                if (user) {
+                    console.log('User logged in:', user.email);
+                    
+                    const usersQuery = window.firebase.query(
+                        window.firebase.collection(window.firebase.db, 'users')
+                    );
+                    const snapshot = await window.firebase.getDocs(usersQuery);
+                    
+                    let isAdmin = false;
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        if (data.email === user.email) {
+                            isAdmin = data.isAdmin || false;
+                        }
+                    });
+                    
+                    currentUser = {
+                        id: user.uid,
+                        username: user.email,
+                        email: user.email,
+                        isAdmin: isAdmin
+                    };
+                    
+                    saveToLocalStorage();
+                    updateUIForUser();
+                } else {
+                    console.log('User logged out');
+                    currentUser = null;
+                    saveToLocalStorage();
+                    updateUIForUser();
+                }
+            });
         }
 
         // Initialize event listeners
