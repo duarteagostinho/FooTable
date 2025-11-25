@@ -60,15 +60,6 @@
         window.firebaseInitialized = true;
         
         console.log('Firebase initialized successfully');
-        
-        // Update connection status once DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                updateConnectionStatus(true);
-            });
-        } else {
-            updateConnectionStatus(true);
-        }
     </script>
 </head>
 
@@ -1181,11 +1172,6 @@
 
             if (!email || !password) {
                 alert('Please enter both email and password');
-                return;
-            }
-
-            if (!firebaseInitialized) {
-                alert('Please setup Firebase first!');
                 return;
             }
 
@@ -2600,8 +2586,10 @@
             updateUIForUser();
             updateDisplay();
             
-            // Set connection status based on Firebase initialization
-            updateConnectionStatus(firebaseInitialized);
+            // Set connection status to green since Firebase is initialized
+            if (window.firebaseInitialized) {
+                updateConnectionStatus(true);
+            }
 
             // Setup auth listener if Firebase is initialized
             setupAuthListener();
