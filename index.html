@@ -2852,7 +2852,7 @@
                 const isUnread = notif.timestamp > lastRead;
                 
                 return `
-                    <div class="p-4 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${isUnread ? 'bg-blue-50 dark:bg-blue-900/10' : ''}">
+                    <div class="p-4 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer ${isUnread ? 'bg-blue-50 dark:bg-blue-900/10' : ''}" onclick="handleNotificationClick('${notif.type}')">
                         <div class="flex items-start gap-3">
                             <span class="text-2xl flex-shrink-0">${icon}</span>
                             <div class="flex-1 min-w-0">
@@ -2864,6 +2864,20 @@
                     </div>
                 `;
             }).join('');
+        }
+        
+        function handleNotificationClick(type) {
+            // Close notification panel
+            document.getElementById('notificationsPanel').classList.add('hidden');
+            
+            // Navigate to appropriate tab based on notification type
+            if (type === 'game_scheduled' || type === 'availability_update') {
+                // Switch to calendar tab
+                switchDashboardTab('calendar');
+            } else if (type === 'game_added' || type === 'game_updated' || type === 'game_deleted') {
+                // Switch to games tab
+                switchDashboardTab('games');
+            }
         }
 
         async function clearAllNotifications() {
