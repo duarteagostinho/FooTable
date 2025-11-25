@@ -3041,13 +3041,15 @@
                     profileImageHTML = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm sm:text-base font-bold shadow-lg">${currentUser.isAdmin ? '👑' : '👤'}</div>`;
                 }
                 
+                const navXpProgress = linkedPlayer ? getXpForNextLevel(linkedPlayer.xp || 0) : null;
+                
                 userInfo.innerHTML = `
                     <div class="flex items-center gap-2 sm:gap-3 md:gap-4">
                         <div class="relative ${clickableClass}" ${clickHandler}>
                             ${linkedPlayer ? `
                             <svg class="absolute -inset-0.5 w-9 h-9 sm:w-11 sm:h-11" viewBox="0 0 100 100">
                                 <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="5" class="text-gray-200 dark:text-gray-700"/>
-                                <circle cx="50" cy="50" r="48" fill="none" stroke="url(#navLevelGradient)" stroke-width="5" stroke-dasharray="${(calculateLevel(linkedPlayer.xp || 0) / 100) * 301.59} 301.59" stroke-linecap="round" transform="rotate(-90 50 50)" class="transition-all duration-500"/>
+                                <circle cx="50" cy="50" r="48" fill="none" stroke="url(#navLevelGradient)" stroke-width="5" stroke-dasharray="${(navXpProgress.percentage / 100) * 301.59} 301.59" stroke-linecap="round" transform="rotate(-90 50 50)" class="transition-all duration-500"/>
                                 <defs>
                                     <linearGradient id="navLevelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                                         <stop offset="0%" style="stop-color:rgb(168,85,247);stop-opacity:1" />
