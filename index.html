@@ -108,18 +108,9 @@
 
     <!-- Notifications Panel -->
     <div id="notificationsPanel" class="hidden fixed top-20 right-4 w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 max-h-[80vh] overflow-hidden flex flex-col">
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="font-bold text-lg text-gray-900 dark:text-white">🔔 Notifications</h3>
-                <button onclick="clearAllNotifications()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Clear All</button>
-            </div>
-            <button onclick="requestNotificationPermission()" id="enableNotificationsBtn" class="hidden w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200">
-                🔔 Enable Push Notifications
-            </button>
-            <div id="notificationsEnabled" class="hidden text-xs text-green-600 dark:text-green-400 flex items-center gap-2">
-                <span>✅</span>
-                <span>Push notifications enabled</span>
-            </div>
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h3 class="font-bold text-lg text-gray-900 dark:text-white">🔔 Notifications</h3>
+            <button onclick="clearAllNotifications()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Clear All</button>
         </div>
         <div id="notificationsList" class="overflow-y-auto flex-1">
             <p class="text-gray-500 dark:text-gray-400 text-center py-8">No notifications yet</p>
@@ -2771,14 +2762,8 @@
 
         // Notification System
         function loadNotifications() {
-            // Notifications are now loaded from Firebase, not localStorage
-            // Just request browser notification permission if needed
-            if ('Notification' in window && Notification.permission === 'default') {
-                // Ask for permission after user is logged in
-                if (currentUser) {
-                    Notification.requestPermission();
-                }
-            }
+            // Notifications are now loaded from Firebase
+            // No browser permission needed - all in-app
         }
 
         function saveNotifications() {
@@ -2807,83 +2792,17 @@
                     window.firebase.collection(window.firebase.db, 'notifications'),
                     notification
                 );
-                
-                // Send browser push notification
-                sendBrowserNotification(title, message);
             } catch (error) {
                 console.error('Error adding notification:', error);
             }
         }
-        
-        function sendBrowserNotification(title, message) {
-            // Check if browser supports notifications and permission is granted
-            if ('Notification' in window && Notification.permission === 'granted') {
-                // Check if the page is not in focus
-                if (document.hidden) {
-                    try {
-                        const notification = new Notification(title, {
-                            body: message,
-                            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">⚽</text></svg>',
-                            badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">⚽</text></svg>',
-                            tag: 'footable-notification',
-                            requireInteraction: false
-                        });
-                        
-                        // Auto close after 10 seconds
-                        setTimeout(() => notification.close(), 10000);
-                        
-                        // Focus on the tab when notification is clicked
-                        notification.onclick = function() {
-                            window.focus();
-                            this.close();
-                        };
-                    } catch (e) {
-                        console.error('Error showing notification:', e);
-                    }
-                }
-            }
-        }
 
-        function requestNotificationPermission() {
-            if ('Notification' in window) {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        updateNotificationPermissionUI();
-                        alert('✅ Push notifications enabled! You will now receive notifications even when this tab is in the background.');
-                    } else {
-                        alert('❌ Notification permission denied. You can enable it later in your browser settings.');
-                    }
-                });
-            } else {
-                alert('❌ Your browser does not support push notifications.');
-            }
-        }
-        
-        function updateNotificationPermissionUI() {
-            const enableBtn = document.getElementById('enableNotificationsBtn');
-            const enabledMsg = document.getElementById('notificationsEnabled');
-            
-            if ('Notification' in window) {
-                if (Notification.permission === 'granted') {
-                    enableBtn.classList.add('hidden');
-                    enabledMsg.classList.remove('hidden');
-                } else if (Notification.permission === 'default') {
-                    enableBtn.classList.remove('hidden');
-                    enabledMsg.classList.add('hidden');
-                } else {
-                    enableBtn.classList.add('hidden');
-                    enabledMsg.classList.add('hidden');
-                }
-            }
-        }
-        
         function toggleNotifications() {
             const panel = document.getElementById('notificationsPanel');
             const isHidden = panel.classList.contains('hidden');
             
             if (isHidden) {
                 panel.classList.remove('hidden');
-                updateNotificationPermissionUI();
                 updateNotificationsList();
                 // Mark all as read after opening
                 setTimeout(() => {
