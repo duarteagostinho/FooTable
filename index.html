@@ -1175,20 +1175,25 @@
                 return;
             }
 
+            if (password.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
             try {
+                // Try to sign in first
                 const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
                 console.log('Logged in successfully:', userCredential.user.email);
                 hideLogin();
             } catch (error) {
                 console.error('Login error:', error);
-                if (error.code === 'auth/user-not-found') {
+                // If user not found or invalid credentials, offer to create account
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
                     if (confirm('Account not found. Create new account with this email?')) {
                         await createAccount();
                     }
                 } else if (error.code === 'auth/wrong-password') {
                     alert('Incorrect password');
-                } else if (error.code === 'auth/invalid-email') {
-                    alert('Invalid email format');
                 } else {
                     alert('Login failed: ' + error.message);
                 }
@@ -2598,34 +2603,62 @@
         }
 
         function setupAuthListener() {
-            if (!firebaseInitialized || !window.firebase.auth) return;
+            if (!firebaseInitialized || !window.firebase.auth) {
+                console.log('Cannot setup auth listener - Firebase not initialized');
+                return;
+            }
+
+            console.log('Setting up Firebase auth listener...');
 
             window.firebase.onAuthStateChanged(window.firebase.auth, async (user) => {
                 if (user) {
                     console.log('User logged in:', user.email);
                     
-                    const usersQuery = window.firebase.query(
-                        window.firebase.collection(window.firebase.db, 'users')
-                    );
-                    const snapshot = await window.firebase.getDocs(usersQuery);
-                    
-                    let isAdmin = false;
-                    snapshot.docs.forEach(doc => {
-                        const data = doc.data();
-                        if (data.email === user.email) {
-                            isAdmin = data.isAdmin || false;
+                    try {
+                        const usersQuery = window.firebase.query(
+                            window.firebase.collection(window.firebase.db, 'users')
+                        );
+                        const snapshot = await window.firebase.getDocs(usersQuery);
+                        
+                        let isAdmin = false;
+                        let userFound = false;
+                        
+                        snapshot.docs.forEach(doc => {
+                            const data = doc.data();
+                            if (data.email === user.email) {
+                                isAdmin = data.isAdmin || false;
+                                userFound = true;
+                                console.log('User document found in Firestore, isAdmin:', isAdmin);
+                            }
+                        });
+                        
+                        if (!userFound) {
+                            console.log('User not found in Firestore, creating user document...');
+                            // Create user document if it doesn't exist
+                            await window.firebase.addDoc(
+                                window.firebase.collection(window.firebase.db, 'users'),
+                                {
+                                    email: user.email,
+                                    isAdmin: false,
+                                    createdAt: window.firebase.serverTimestamp()
+                                }
+                            );
                         }
-                    });
-                    
-                    currentUser = {
-                        id: user.uid,
-                        username: user.email,
-                        email: user.email,
-                        isAdmin: isAdmin
-                    };
-                    
-                    saveToLocalStorage();
-                    updateUIForUser();
+                        
+                        currentUser = {
+                            id: user.uid,
+                            username: user.email,
+                            email: user.email,
+                            isAdmin: isAdmin
+                        };
+                        
+                        console.log('Current user set to:', currentUser);
+                        saveToLocalStorage();
+                        updateUIForUser();
+                    } catch (error) {
+                        console.error('Error in auth state handler:', error);
+                        alert('Error loading user data: ' + error.message);
+                    }
                 } else {
                     console.log('User logged out');
                     currentUser = null;
