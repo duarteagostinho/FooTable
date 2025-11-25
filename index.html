@@ -1012,6 +1012,25 @@
                     }
                 );
                 unsubscribeFunctions.push(unsubScheduledGames);
+
+                // Listen for notifications changes
+                const notificationsQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'notifications'),
+                    window.firebase.orderBy('timestamp', 'desc')
+                );
+                
+                const unsubNotifications = window.firebase.onSnapshot(notificationsQuery,
+                    (snapshot) => {
+                        notifications = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                        console.log('Notifications updated:', notifications.length, 'notifications');
+                        updateNotificationBadge();
+                        updateNotificationsList();
+                    },
+                    (error) => {
+                        console.error('Notifications listener error:', error);
+                    }
+                );
+                unsubscribeFunctions.push(unsubNotifications);
             }
 
             static async addGame(gameData) {
@@ -2752,17 +2771,8 @@
 
         // Notification System
         function loadNotifications() {
-            const saved = localStorage.getItem('footable-notifications');
-            if (saved) {
-                try {
-                    notifications = JSON.parse(saved);
-                    updateNotificationBadge();
-                } catch (e) {
-                    notifications = [];
-                }
-            }
-            
-            // Request browser notification permission
+            // Notifications are now loaded from Firebase, not localStorage
+            // Just request browser notification permission if needed
             if ('Notification' in window && Notification.permission === 'default') {
                 // Ask for permission after user is logged in
                 if (currentUser) {
@@ -2772,33 +2782,37 @@
         }
 
         function saveNotifications() {
-            localStorage.setItem('footable-notifications', JSON.stringify(notifications));
+            // Notifications are now saved to Firebase automatically
             updateNotificationBadge();
         }
 
-        function addNotification(type, title, message, data = {}) {
+        async function addNotification(type, title, message, data = {}) {
+            if (!window.firebase || !window.firebase.db) {
+                console.error('Firebase not initialized');
+                return;
+            }
+
             const notification = {
-                id: Date.now() + Math.random(),
                 type, // 'game_scheduled', 'availability_update', 'game_added', etc.
                 title,
                 message,
                 data,
                 timestamp: Date.now(),
-                read: false
+                createdAt: window.firebase.serverTimestamp()
             };
             
-            notifications.unshift(notification);
-            
-            // Keep only last 50 notifications
-            if (notifications.length > 50) {
-                notifications = notifications.slice(0, 50);
+            try {
+                // Save to Firebase - will be synced to all users
+                await window.firebase.addDoc(
+                    window.firebase.collection(window.firebase.db, 'notifications'),
+                    notification
+                );
+                
+                // Send browser push notification
+                sendBrowserNotification(title, message);
+            } catch (error) {
+                console.error('Error adding notification:', error);
             }
-            
-            saveNotifications();
-            updateNotificationsList();
-            
-            // Send browser push notification
-            sendBrowserNotification(title, message);
         }
         
         function sendBrowserNotification(title, message) {
@@ -2873,8 +2887,8 @@
                 updateNotificationsList();
                 // Mark all as read after opening
                 setTimeout(() => {
-                    notifications.forEach(n => n.read = true);
-                    saveNotifications();
+                    localStorage.setItem('footable-lastReadNotification', Date.now().toString());
+                    updateNotificationBadge();
                 }, 1000);
             } else {
                 panel.classList.add('hidden');
@@ -2883,7 +2897,10 @@
 
         function updateNotificationBadge() {
             const badge = document.getElementById('notificationBadge');
-            const unreadCount = notifications.filter(n => !n.read).length;
+            
+            // Get user's last read timestamp from localStorage
+            const lastRead = parseInt(localStorage.getItem('footable-lastReadNotification') || '0');
+            const unreadCount = notifications.filter(n => n.timestamp > lastRead).length;
             
             if (unreadCount > 0) {
                 badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
@@ -2901,6 +2918,8 @@
                 return;
             }
             
+            const lastRead = parseInt(localStorage.getItem('footable-lastReadNotification') || '0');
+            
             list.innerHTML = notifications.map(notif => {
                 const timeAgo = getTimeAgo(notif.timestamp);
                 const icons = {
@@ -2911,9 +2930,10 @@
                     'game_deleted': '🗑️'
                 };
                 const icon = icons[notif.type] || '🔔';
+                const isUnread = notif.timestamp > lastRead;
                 
                 return `
-                    <div class="p-4 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${!notif.read ? 'bg-blue-50 dark:bg-blue-900/10' : ''}">
+                    <div class="p-4 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${isUnread ? 'bg-blue-50 dark:bg-blue-900/10' : ''}">
                         <div class="flex items-start gap-3">
                             <span class="text-2xl flex-shrink-0">${icon}</span>
                             <div class="flex-1 min-w-0">
@@ -2927,11 +2947,31 @@
             }).join('');
         }
 
-        function clearAllNotifications() {
-            if (confirm('Clear all notifications?')) {
-                notifications = [];
-                saveNotifications();
-                updateNotificationsList();
+        async function clearAllNotifications() {
+            if (!confirm('Clear all notifications? This will clear them for everyone.')) {
+                return;
+            }
+            
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('Only admins can clear all notifications');
+                return;
+            }
+
+            try {
+                // Delete all notification documents
+                const batch = [];
+                for (const notif of notifications) {
+                    batch.push(
+                        window.firebase.deleteDoc(
+                            window.firebase.doc(window.firebase.db, 'notifications', notif.id)
+                        )
+                    );
+                }
+                await Promise.all(batch);
+                alert('All notifications cleared');
+            } catch (error) {
+                console.error('Error clearing notifications:', error);
+                alert('Failed to clear notifications: ' + error.message);
             }
         }
 
