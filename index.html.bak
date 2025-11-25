@@ -41,7 +41,7 @@
         // Import Firebase modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         
         const firebaseConfig = {
             apiKey: "AIzaSyDEJfOfMcYQZ54BnwwK_Kk_1T0jBKCKoo0",
@@ -56,7 +56,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged };
+        window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail };
         window.firebaseInitialized = true;
         
         console.log('Firebase initialized successfully');
@@ -90,11 +90,7 @@
                     
                     <div id="userInfo" class="text-sm md:text-base text-gray-700 dark:text-gray-300"></div>
                     
-                    <!-- Player Login Button -->
-                    <button id="playerLoginBtn" onclick="showPlayerLogin()" class="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-3 md:px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-xs md:text-sm">
-                        👤 Player
-                    </button>
-                    
+
                     <button id="loginBtn" onclick="showLogin()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 md:px-6 py-2.5 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm md:text-base">
                         Login
                     </button>
@@ -174,24 +170,7 @@
                 </button>
             </div>
             
-            <!-- Non-admin message -->
-            <div id="nonAdminMessage" class="hidden">
-                <p class="text-gray-600 dark:text-gray-400 text-lg font-medium mb-4">
-                    Please login as an administrator to add games and manage players.
-                </p>
-                <p class="text-gray-500 dark:text-gray-500 text-sm mb-4">
-                    Players can login with their name to edit their profiles and upload pictures! 📸
-                </p>
-                <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                    <button onclick="showLogin()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                        🔓 Login as Admin
-                    </button>
-                    <span class="text-gray-400 dark:text-gray-500">or</span>
-                    <button onclick="showPlayerLogin()" class="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                        👤 Player Login
-                    </button>
-                </div>
-            </div>
+
         </div>
 
         <!-- Dashboard Grid -->
@@ -429,6 +408,12 @@
                         <input type="number" id="playerAge" placeholder="Enter age" min="16" max="50" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📧 Email (optional - to link to user account):</label>
+                        <input type="email" id="playerEmail" placeholder="player@example.com" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Link this player to a user account for profile access</p>
+                    </div>
+                    
                     <!-- Goals and Assists (only visible during edit) -->
                     <div id="playerStatsFields" class="hidden grid grid-cols-2 gap-4">
                         <div>
@@ -521,38 +506,32 @@
         </div>
     </div>
 
-    <!-- Player Login Modal -->
-    <div id="playerLoginModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[60] animate-fade-in">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
-            <div class="p-8">
-                <div class="flex items-center gap-3 mb-8">
-                    <div class="p-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600">
-                        <span class="text-white text-xl">🔑</span>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Player Login</h3>
+    <!-- Image Cropper Modal -->
+    <div id="imageCropperModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Crop Profile Picture</h3>
+                    <button onclick="closeImageCropper()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold">×</button>
                 </div>
                 
-                <form id="playerLoginForm" class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Player Name:</label>
-                        <select id="playerLoginSelect" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            <option value="">Select your name...</option>
-                        </select>
+                <div class="mb-4 flex justify-center bg-gray-900 rounded-lg p-4">
+                    <div id="cropperContainer" class="relative" style="display: inline-block;">
+                        <canvas id="cropperCanvas" class="max-w-full max-h-[500px] block"></canvas>
+                        <div id="cropCircle" class="absolute border-4 border-blue-500 rounded-full cursor-move pointer-events-auto" style="width: 300px; height: 300px; top: 50px; left: 50px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.7);"></div>
                     </div>
-                    
-                    <div>
-                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Password (optional):</label>
-                        <input type="password" id="playerPassword" placeholder="Enter password (if set)" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty if you haven't set a password yet</p>
-                    </div>
-                </form>
+                </div>
                 
-                <div class="flex gap-4 mt-8 justify-end">
-                    <button onclick="hidePlayerLogin()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">
+                    💡 Drag the circle to select the area you want (300x300px fixed size)
+                </div>
+                
+                <div class="flex gap-3 relative z-10">
+                    <button onclick="closeImageCropper()" class="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-semibold shadow-lg">
                         Cancel
                     </button>
-                    <button onclick="loginAsPlayer()" class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                        🔓 Login
+                    <button onclick="applyCrop()" class="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition font-semibold shadow-lg">
+                        ✂️ Crop & Save
                     </button>
                 </div>
             </div>
@@ -568,6 +547,8 @@
         let currentEditingPlayer = null;
         let firebaseInitialized = false;
         let unsubscribeFunctions = [];
+        let cropperImage = null;
+        let cropperState = { x: 50, y: 50, size: 200, isDragging: false, isResizing: false, resizeCorner: null, startX: 0, startY: 0 };
 
         // Firebase service class
         class FirebaseService {
@@ -616,6 +597,7 @@
                     
                     window.firebase = { 
                         db, 
+                        auth,
                         collection, 
                         addDoc, 
                         getDocs, 
@@ -625,7 +607,15 @@
                         query, 
                         orderBy, 
                         onSnapshot, 
-                        serverTimestamp 
+                        serverTimestamp,
+                        createUserWithEmailAndPassword,
+                        signInWithEmailAndPassword,
+                        signOut,
+                        onAuthStateChanged,
+                        EmailAuthProvider,
+                        reauthenticateWithCredential,
+                        updatePassword,
+                        updateEmail
                     };
                     
                     firebaseInitialized = true;
@@ -646,7 +636,12 @@
             }
 
             static setupListeners() {
-                if (!firebaseInitialized) return;
+                if (!window.firebaseInitialized) {
+                    console.log('Cannot setup Firebase listeners - not initialized');
+                    return;
+                }
+
+                console.log('🔥 Setting up Firebase data listeners...');
 
                 // Listen for games changes
                 const gamesQuery = window.firebase.query(
@@ -654,10 +649,18 @@
                     window.firebase.orderBy('date', 'desc')
                 );
                 
-                const unsubGames = window.firebase.onSnapshot(gamesQuery, (snapshot) => {
-                    games = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    updateDisplay();
-                });
+                const unsubGames = window.firebase.onSnapshot(gamesQuery, 
+                    (snapshot) => {
+                        console.log('📊 Games data received:', snapshot.docs.length, 'games');
+                        games = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        updateDisplay();
+                    },
+                    (error) => {
+                        console.error('❌ Error loading games:', error);
+                        console.error('Error code:', error.code);
+                        console.error('Error message:', error.message);
+                    }
+                );
                 unsubscribeFunctions.push(unsubGames);
 
                 // Listen for players changes
@@ -666,10 +669,31 @@
                     window.firebase.orderBy('name')
                 );
                 
-                const unsubPlayers = window.firebase.onSnapshot(playersQuery, (snapshot) => {
-                    players = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    updateDisplay();
-                });
+                const unsubPlayers = window.firebase.onSnapshot(playersQuery, 
+                    (snapshot) => {
+                        console.log('👥 Players data received:', snapshot.docs.length, 'players');
+                        players = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        
+                        // Re-check for linked player if user is logged in
+                        if (currentUser && currentUser.email && !currentUser.linkedPlayer) {
+                            const linkedPlayer = players.find(p => p.email && p.email.toLowerCase() === currentUser.email.toLowerCase());
+                            if (linkedPlayer) {
+                                console.log('✅ Found linked player after data load:', linkedPlayer.name);
+                                currentUser.linkedPlayer = linkedPlayer.id;
+                                currentUser.playerName = linkedPlayer.name;
+                                saveToLocalStorage();
+                            }
+                        }
+                        
+                        updateDisplay();
+                        updateUIForUser();
+                    },
+                    (error) => {
+                        console.error('❌ Error loading players:', error);
+                        console.error('Error code:', error.code);
+                        console.error('Error message:', error.message);
+                    }
+                );
                 unsubscribeFunctions.push(unsubPlayers);
             }
 
@@ -715,7 +739,10 @@
             }
 
             static async updatePlayer(playerData) {
-                if (!firebaseInitialized) {
+                console.log('FirebaseService.updatePlayer called with:', playerData);
+                
+                if (!window.firebaseInitialized) {
+                    console.log('Firebase not initialized, saving to localStorage only');
                     // When Firebase is not initialized, just save to localStorage
                     saveToLocalStorage();
                     return;
@@ -737,6 +764,7 @@
                     });
 
                     if (docId) {
+                        console.log('Updating Firebase document:', docId);
                         await window.firebase.updateDoc(
                             window.firebase.doc(window.firebase.db, 'players', docId),
                             { 
@@ -745,13 +773,14 @@
                                 lastUpdatedBy: playerData.lastUpdatedBy || 'unknown'
                             }
                         );
-                        console.log('Player updated in Firebase successfully');
+                        console.log('✅ Player updated in Firebase successfully');
                     } else {
                         console.warn('Player not found in Firebase, saving locally only');
                         saveToLocalStorage();
                     }
                 } catch (error) {
-                    console.error('Error updating player in Firebase:', error);
+                    console.error('❌ Error updating player in Firebase:', error);
+                    console.error('Error details:', error.message);
                     // Fallback to localStorage
                     saveToLocalStorage();
                 }
@@ -1167,8 +1196,15 @@
         }
 
         async function login() {
+            console.log('=== LOGIN ATTEMPT START ===');
+            console.log('firebaseInitialized:', window.firebaseInitialized);
+            console.log('window.firebase:', window.firebase);
+            
             const email = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
+
+            console.log('Email:', email);
+            console.log('Password length:', password.length);
 
             if (!email || !password) {
                 alert('Please enter both email and password');
@@ -1180,24 +1216,44 @@
                 return;
             }
 
+            if (!window.firebase || !window.firebase.auth) {
+                alert('Firebase not initialized. Please refresh the page.');
+                console.error('Firebase not available');
+                return;
+            }
+
             try {
+                console.log('Attempting Firebase sign in...');
                 // Try to sign in first
                 const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
-                console.log('Logged in successfully:', userCredential.user.email);
+                console.log('✅ Logged in successfully:', userCredential.user.email);
+                console.log('User object:', userCredential.user);
                 hideLogin();
+                console.log('Login modal hidden');
             } catch (error) {
-                console.error('Login error:', error);
-                // If user not found or invalid credentials, offer to create account
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
+                console.error('❌ Login error:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                
+                // Handle different error types
+                if (error.code === 'auth/wrong-password') {
+                    alert('Incorrect password. Please try again.');
+                } else if (error.code === 'auth/invalid-credential') {
+                    alert('Invalid email or password. Please check your credentials and try again.');
+                } else if (error.code === 'auth/user-not-found') {
+                    // Only offer to create account if truly not found
                     if (confirm('Account not found. Create new account with this email?')) {
                         await createAccount();
                     }
-                } else if (error.code === 'auth/wrong-password') {
-                    alert('Incorrect password');
+                } else if (error.code === 'auth/invalid-email') {
+                    alert('Invalid email format. Please enter a valid email address.');
+                } else if (error.code === 'auth/too-many-requests') {
+                    alert('Too many failed login attempts. Please try again later or reset your password.');
                 } else {
                     alert('Login failed: ' + error.message);
                 }
             }
+            console.log('=== LOGIN ATTEMPT END ===');
         }
 
         async function createAccount() {
@@ -1213,14 +1269,34 @@
                 const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, password);
                 console.log('Account created:', userCredential.user.email);
                 
-                await window.firebase.addDoc(
-                    window.firebase.collection(window.firebase.db, 'users'),
-                    {
-                        email: email,
-                        isAdmin: false,
-                        createdAt: window.firebase.serverTimestamp()
-                    }
+                // Check if user document already exists in Firestore
+                const usersQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'users')
                 );
+                const snapshot = await window.firebase.getDocs(usersQuery);
+                
+                let existingUser = null;
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.email === email) {
+                        existingUser = data;
+                    }
+                });
+                
+                // Only create new user document if it doesn't exist
+                if (!existingUser) {
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'users'),
+                        {
+                            email: email,
+                            isAdmin: false,
+                            createdAt: window.firebase.serverTimestamp()
+                        }
+                    );
+                    console.log('Created new user document in Firestore');
+                } else {
+                    console.log('User document already exists in Firestore - using existing');
+                }
                 
                 alert('Account created successfully! You are now logged in.');
                 hideLogin();
@@ -1231,7 +1307,10 @@
         }
 
         async function logout() {
-            if (!firebaseInitialized) {
+            console.log('🚪 Logout initiated...');
+            
+            if (!window.firebaseInitialized || !window.firebase) {
+                console.log('No Firebase - clearing local user only');
                 currentUser = null;
                 saveToLocalStorage();
                 updateUIForUser();
@@ -1239,13 +1318,17 @@
             }
 
             try {
+                console.log('Signing out from Firebase...');
                 await window.firebase.signOut(window.firebase.auth);
                 currentUser = null;
+                games = [];
+                players = [];
                 saveToLocalStorage();
                 updateUIForUser();
-                console.log('Logged out successfully');
+                updateDisplay();
+                console.log('✅ Logged out successfully');
             } catch (error) {
-                console.error('Logout error:', error);
+                console.error('❌ Logout error:', error);
                 alert('Logout failed: ' + error.message);
             }
         }
@@ -1253,32 +1336,30 @@
         function updateUIForUser() {
             const userInfo = document.getElementById('userInfo');
             const loginBtn = document.getElementById('loginBtn');
-            const playerLoginBtn = document.getElementById('playerLoginBtn');
             const adminControls = document.getElementById('adminControls');
-            const nonAdminMessage = document.getElementById('nonAdminMessage');
 
             if (currentUser) {
-                const isPlayerLoggedIn = currentUser.isPlayer && currentUser.playerId;
+                const linkedPlayer = currentUser.linkedPlayer ? players.find(p => p.id === currentUser.linkedPlayer) : null;
                 let profileImageHTML = '';
                 let clickableClass = '';
                 let clickHandler = '';
+                let displayName = currentUser.email;
+                let userRole = currentUser.isAdmin ? 'Administrator' : 'User';
                 
-                // Get player's profile picture if logged in as player
-                if (isPlayerLoggedIn) {
-                    const player = players.find(p => p.name === currentUser.playerId);
-                    if (player) {
-                        if (player.profilePicture) {
-                            profileImageHTML = `<img src="${player.profilePicture}" alt="${player.name}" class="w-10 h-10 rounded-full object-cover shadow-lg border-2 border-white dark:border-gray-700">`;
-                        } else {
-                            profileImageHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-lg border-2 border-white dark:border-gray-700">${player.name.charAt(0).toUpperCase()}</div>`;
-                        }
-                        clickableClass = 'cursor-pointer hover:scale-105 transition-transform duration-200';
-                        clickHandler = `onclick="showPlayerProfile('${player.name}')" title="View my profile"`;
+                // If user has a linked player profile
+                if (linkedPlayer) {
+                    displayName = linkedPlayer.name;
+                    userRole = currentUser.isAdmin ? 'Admin Player' : 'Player';
+                    
+                    if (linkedPlayer.profilePicture) {
+                        profileImageHTML = `<img src="${linkedPlayer.profilePicture}" alt="${linkedPlayer.name}" class="w-10 h-10 rounded-full object-cover shadow-lg border-2 border-white dark:border-gray-700">`;
                     } else {
-                        profileImageHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-lg">👤</div>`;
+                        profileImageHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-lg border-2 border-white dark:border-gray-700">${linkedPlayer.name.charAt(0).toUpperCase()}</div>`;
                     }
+                    clickableClass = 'cursor-pointer hover:scale-105 transition-transform duration-200';
+                    clickHandler = `onclick="showPlayerProfile('${linkedPlayer.id}')" title="View my player profile"`;
                 } else {
-                    // Admin or regular user
+                    // Regular user without linked player
                     profileImageHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">${currentUser.isAdmin ? '👑' : '👤'}</div>`;
                 }
                 
@@ -1288,36 +1369,24 @@
                             ${profileImageHTML}
                         </div>
                         <div class="flex flex-col">
-                            <span class="font-semibold text-gray-900 dark:text-white">${currentUser.isPlayer ? currentUser.playerName : currentUser.username}</span>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">${currentUser.isAdmin ? 'Administrator' : currentUser.isPlayer ? 'Player' : 'User'}</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">${displayName}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">${userRole}</span>
                         </div>
                         <button onclick="logout()" class="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors">Logout</button>
                     </div>
                 `;
                 
-                if (currentUser.isPlayer) {
-                    loginBtn.classList.add('hidden');
-                    playerLoginBtn.classList.add('hidden');
-                    adminControls.classList.add('hidden');
-                    nonAdminMessage.classList.add('hidden');
+                loginBtn.classList.add('hidden');
+                
+                if (currentUser.isAdmin) {
+                    adminControls.classList.remove('hidden');
                 } else {
-                    playerLoginBtn.classList.add('hidden');
-                    loginBtn.classList.add('hidden');
-                    
-                    if (currentUser.isAdmin) {
-                        adminControls.classList.remove('hidden');
-                        nonAdminMessage.classList.add('hidden');
-                    } else {
-                        adminControls.classList.add('hidden');
-                        nonAdminMessage.classList.remove('hidden');
-                    }
+                    adminControls.classList.add('hidden');
                 }
             } else {
                 userInfo.innerHTML = '';
                 loginBtn.classList.remove('hidden');
-                playerLoginBtn.classList.remove('hidden');
                 adminControls.classList.add('hidden');
-                nonAdminMessage.classList.remove('hidden');
             }
         }
 
@@ -1655,6 +1724,7 @@
             const name = document.getElementById('playerName').value.trim();
             const position = document.getElementById('playerPosition').value.trim();
             const age = document.getElementById('playerAge').value.trim();
+            const email = document.getElementById('playerEmail').value.trim();
 
             if (!name) {
                 alert('Player name is required');
@@ -1670,12 +1740,19 @@
                 alert('Player already exists');
                 return;
             }
+            
+            // Check if email is already linked to another player
+            if (email && players.find(p => p.email && p.email.toLowerCase() === email.toLowerCase())) {
+                alert('This email is already linked to another player');
+                return;
+            }
 
             const newPlayer = {
                 id: Date.now() + Math.random(),
                 name: name,
                 position: position,
                 age: age ? parseInt(age) : null,
+                email: email || null,
                 gamesPlayed: 0,
                 wins: 0,
                 draws: 0,
@@ -1795,6 +1872,7 @@
             document.getElementById('playerName').value = player.name;
             document.getElementById('playerPosition').value = player.position || '';
             document.getElementById('playerAge').value = player.age || '';
+            document.getElementById('playerEmail').value = player.email || '';
             document.getElementById('playerGoals').value = player.goals || 0;
             document.getElementById('playerAssists').value = player.assists || 0;
             
@@ -1813,7 +1891,7 @@
             showAddPlayerModal();
         }
 
-        function updatePlayer() {
+        async function updatePlayer() {
             if (!currentEditingPlayer) {
                 alert('No player selected for editing');
                 return;
@@ -1822,6 +1900,7 @@
             const name = document.getElementById('playerName').value.trim();
             const position = document.getElementById('playerPosition').value.trim();
             const age = document.getElementById('playerAge').value.trim();
+            const email = document.getElementById('playerEmail').value.trim();
             const goals = parseInt(document.getElementById('playerGoals').value) || 0;
             const assists = parseInt(document.getElementById('playerAssists').value) || 0;
 
@@ -1841,33 +1920,57 @@
                 alert('Another player with this name already exists');
                 return;
             }
+            
+            // Check if email is already linked to another player
+            if (email && players.find(p => p.email && p.email.toLowerCase() === email.toLowerCase() && p.id !== currentEditingPlayer.id)) {
+                alert('This email is already linked to another player');
+                return;
+            }
 
             // Update all editable fields
             currentEditingPlayer.name = name;
             currentEditingPlayer.position = position;
             currentEditingPlayer.age = age ? parseInt(age) : null;
+            currentEditingPlayer.email = email || null;
             currentEditingPlayer.goals = goals;
             currentEditingPlayer.assists = assists;
             // Add update tracking
             currentEditingPlayer.lastUpdatedAt = new Date().toISOString();
             currentEditingPlayer.lastUpdatedBy = currentUser.username;
+            
+            console.log('Updating player with email:', email);
+            console.log('Current player object:', currentEditingPlayer);
+
+            // Update the player in the local players array
+            const playerIndex = players.findIndex(p => p.id === currentEditingPlayer.id);
+            if (playerIndex > -1) {
+                players[playerIndex] = currentEditingPlayer;
+                console.log('Updated local players array');
+            }
 
             // Use Firebase service to update player (this handles both Firebase and localStorage)
-            FirebaseService.updatePlayer(currentEditingPlayer);
+            await FirebaseService.updatePlayer(currentEditingPlayer);
             
+            saveToLocalStorage();
             updateDisplay();
+            
+            // Reset modal for next use BEFORE hiding it
+            const modalTitle = document.querySelector('#playerModal h3');
+            if (modalTitle) {
+                modalTitle.innerHTML = '<span class="text-white text-xl">👤</span> Add New Player';
+            }
+            
+            const updateButton = document.querySelector('#playerModal button[onclick="updatePlayer()"]');
+            if (updateButton) {
+                updateButton.innerHTML = '👤 Add Player';
+                updateButton.setAttribute('onclick', 'addPlayer()');
+            }
+            
+            currentEditingPlayer = null;
+            
             hideAddPlayerModal();
             populatePlayersTable(); // Refresh the players table
             
-            // Reset modal for next use
-            const modalTitle = document.querySelector('#playerModal h3');
-            modalTitle.innerHTML = '<span class="text-white text-xl">👤</span> Add New Player';
-            
-            const updateButton = document.querySelector('#playerModal button[onclick="updatePlayer()"]');
-            updateButton.innerHTML = '👤 Add Player';
-            updateButton.setAttribute('onclick', 'addPlayer()');
-            
-            currentEditingPlayer = null;
             alert(`Player ${name} updated successfully!`);
         }
 
@@ -2049,7 +2152,11 @@
 
         // Player Profile Functions
         function showPlayerProfile(playerId) {
-            const player = players.find(p => p.id === playerId || p.name === playerId);
+            console.log('showPlayerProfile called with:', playerId, typeof playerId);
+            // Convert playerId to number if it's a string number
+            const numericId = typeof playerId === 'string' && !isNaN(playerId) ? parseFloat(playerId) : playerId;
+            const player = players.find(p => p.id === numericId || p.id === playerId || p.name === playerId);
+            console.log('Found player:', player);
             if (!player) {
                 alert('Player not found');
                 return;
@@ -2057,7 +2164,9 @@
 
             document.getElementById('profileModalTitle').textContent = `${player.name}'s Profile`;
             
-            const isOwnProfile = currentUser && currentUser.playerId === player.name;
+            // Check if this is the current user's linked player profile
+            const isOwnProfile = currentUser && currentUser.linkedPlayer === player.id;
+            console.log('Is own profile?', isOwnProfile, 'currentUser.linkedPlayer:', currentUser?.linkedPlayer, 'player.id:', player.id);
             
             const profileHTML = `
                 <div class="space-y-6">
@@ -2124,9 +2233,16 @@
                             </div>
                             ${isOwnProfile ? `
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Set Password:</label>
-                                    <input type="password" id="profilePassword" placeholder="Set profile password" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional: protect your profile with a password</p>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email:</label>
+                                    <input type="email" id="profileEmail" value="${player.email || ''}" placeholder="Enter email" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Used to link your account to this player profile</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Password:</label>
+                                    <button onclick="showChangePassword()" class="w-full p-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 text-sm">
+                                        🔐 Change Password
+                                    </button>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Change your login password</p>
                                 </div>
                             ` : ''}
                         </div>
@@ -2259,29 +2375,177 @@
                 return;
             }
 
-            // Show loading message
-            const currentPlayerName = currentUser.playerId;
-            alert('Processing image... Please wait.');
+            // Load image into cropper
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                cropperImage = new Image();
+                cropperImage.onload = function() {
+                    showImageCropper();
+                };
+                cropperImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
 
-            // Process and compress the image
-            compressAndCropImage(file, 300, 300, 0.8).then(compressedBase64 => {
-                const player = players.find(p => p.name === currentPlayerName);
+        function showImageCropper() {
+            const modal = document.getElementById('imageCropperModal');
+            const canvas = document.getElementById('cropperCanvas');
+            const ctx = canvas.getContext('2d');
+            const circle = document.getElementById('cropCircle');
+            
+            // Set canvas size to fit the image (max 600px width)
+            const maxWidth = 600;
+            const maxHeight = 500;
+            let displayWidth = cropperImage.width;
+            let displayHeight = cropperImage.height;
+            
+            // Scale down if needed
+            if (displayWidth > maxWidth) {
+                const scale = maxWidth / displayWidth;
+                displayWidth = maxWidth;
+                displayHeight = cropperImage.height * scale;
+            }
+            if (displayHeight > maxHeight) {
+                const scale = maxHeight / displayHeight;
+                displayHeight = maxHeight;
+                displayWidth = displayWidth * scale;
+            }
+            
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
+            
+            // Draw the image
+            ctx.drawImage(cropperImage, 0, 0, canvas.width, canvas.height);
+            
+            console.log('Canvas display size:', canvas.width, 'x', canvas.height);
+            console.log('Original image size:', cropperImage.width, 'x', cropperImage.height);
+            
+            // Fixed circle size - scale it based on canvas size
+            const circleDisplaySize = Math.min(300, canvas.width * 0.8, canvas.height * 0.8);
+            cropperState.size = circleDisplaySize;
+            cropperState.x = Math.max(0, (canvas.width - circleDisplaySize) / 2);
+            cropperState.y = Math.max(0, (canvas.height - circleDisplaySize) / 2);
+            
+            console.log('Circle initial position:', cropperState.x, cropperState.y, 'size:', cropperState.size);
+            
+            updateCropCircle();
+            
+            modal.classList.remove('hidden');
+            setupCropperEvents();
+        }
+
+        function updateCropCircle() {
+            const circle = document.getElementById('cropCircle');
+            const canvas = document.getElementById('cropperCanvas');
+            const container = document.getElementById('cropperContainer');
+            
+            circle.style.width = cropperState.size + 'px';
+            circle.style.height = cropperState.size + 'px';
+            circle.style.left = cropperState.x + 'px';
+            circle.style.top = cropperState.y + 'px';
+        }
+
+        function setupCropperEvents() {
+            const canvas = document.getElementById('cropperCanvas');
+            const circle = document.getElementById('cropCircle');
+            
+            // Handle dragging the circle (no resizing - fixed size)
+            circle.onmousedown = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 
-                if (player) {
-                    player.profilePicture = compressedBase64;
-                    FirebaseService.updatePlayer(player);
-                    saveToLocalStorage();
-                    updateDisplay();
-                    updateUIForUser(); // Refresh navigation area to show new profile picture
+                cropperState.isDragging = true;
+                cropperState.startX = e.clientX;
+                cropperState.startY = e.clientY;
+                cropperState.startPosX = cropperState.x;
+                cropperState.startPosY = cropperState.y;
+            };
+            
+            document.onmousemove = function(e) {
+                if (cropperState.isDragging) {
+                    const dx = e.clientX - cropperState.startX;
+                    const dy = e.clientY - cropperState.startY;
                     
-                    // Refresh the profile modal to show new picture
-                    showPlayerProfile(currentPlayerName);
-                    alert('Profile picture updated successfully! 📸');
+                    cropperState.x = Math.max(0, Math.min(canvas.width - cropperState.size, cropperState.startPosX + dx));
+                    cropperState.y = Math.max(0, Math.min(canvas.height - cropperState.size, cropperState.startPosY + dy));
+                    
+                    updateCropCircle();
                 }
-            }).catch(error => {
-                console.error('Error processing image:', error);
-                alert('Error processing image. Please try a different image.');
-            });
+            };
+            
+            document.onmouseup = function() {
+                cropperState.isDragging = false;
+            };
+        }
+
+        function closeImageCropper() {
+            const modal = document.getElementById('imageCropperModal');
+            modal.classList.add('hidden');
+            cropperImage = null;
+            document.onmousemove = null;
+            document.onmouseup = null;
+            
+            // Reset file input
+            const input = document.getElementById('profilePictureInput');
+            if (input) input.value = '';
+        }
+
+        function applyCrop() {
+            const canvas = document.getElementById('cropperCanvas');
+            const outputCanvas = document.createElement('canvas');
+            const ctx = outputCanvas.getContext('2d');
+            
+            // Set output size to 300x300
+            const outputSize = 300;
+            outputCanvas.width = outputSize;
+            outputCanvas.height = outputSize;
+            
+            // Get the scale factor - how much the canvas display differs from original image
+            const scaleX = cropperImage.width / canvas.width;
+            const scaleY = cropperImage.height / canvas.height;
+            
+            // Calculate crop area in original image coordinates
+            const cropX = cropperState.x * scaleX;
+            const cropY = cropperState.y * scaleY;
+            const cropWidth = cropperState.size * scaleX;
+            const cropHeight = cropperState.size * scaleY;
+            
+            console.log('Canvas size:', canvas.width, 'x', canvas.height);
+            console.log('Original image size:', cropperImage.width, 'x', cropperImage.height);
+            console.log('Circle position:', cropperState.x, cropperState.y, 'size:', cropperState.size);
+            console.log('Crop area in original:', cropX, cropY, cropWidth, cropHeight);
+            
+            // Draw circular clipped image
+            ctx.beginPath();
+            ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Draw the cropped portion from the original image
+            ctx.drawImage(
+                cropperImage,
+                cropX, cropY, cropWidth, cropHeight,
+                0, 0, outputSize, outputSize
+            );
+            
+            // Convert to base64
+            const compressedBase64 = outputCanvas.toDataURL('image/jpeg', 0.8);
+            
+            // Update player profile
+            const currentPlayerId = currentUser.linkedPlayer;
+            const player = players.find(p => p.id === currentPlayerId);
+            
+            if (player) {
+                player.profilePicture = compressedBase64;
+                FirebaseService.updatePlayer(player);
+                saveToLocalStorage();
+                updateDisplay();
+                updateUIForUser();
+                showPlayerProfile(currentPlayerId);
+                
+                closeImageCropper();
+                alert('Profile picture updated successfully! 📸');
+            }
         }
 
         // Function to compress and crop image
@@ -2366,9 +2630,9 @@
             }
         }
 
-        function savePlayerProfile() {
-            const currentPlayerName = currentUser.playerId; // This is now always a name
-            const player = players.find(p => p.name === currentPlayerName);
+        async function savePlayerProfile() {
+            const currentPlayerId = currentUser.linkedPlayer;
+            const player = players.find(p => p.id === currentPlayerId);
             
             if (!player) {
                 alert('Player not found');
@@ -2379,7 +2643,7 @@
             const newName = document.getElementById('profileName').value.trim();
             const newPosition = document.getElementById('profilePosition').value;
             const newAge = document.getElementById('profileAge').value;
-            const newPassword = document.getElementById('profilePassword').value;
+            const newEmail = document.getElementById('profileEmail').value.trim().toLowerCase();
 
             if (!newName) {
                 alert('Player name is required');
@@ -2387,27 +2651,72 @@
             }
 
             // Check if name is already taken by another player
-            const existingPlayer = players.find(p => p.name.toLowerCase() === newName.toLowerCase() && p.name !== currentPlayerName);
+            const existingPlayer = players.find(p => p.name.toLowerCase() === newName.toLowerCase() && p.id !== currentPlayerId);
             if (existingPlayer) {
                 alert('A player with this name already exists');
                 return;
+            }
+
+            // Check if email is already used by another player
+            if (newEmail) {
+                const emailTaken = players.find(p => p.email && p.email.toLowerCase() === newEmail && p.id !== currentPlayerId);
+                if (emailTaken) {
+                    alert('This email is already linked to another player profile');
+                    return;
+                }
+            }
+
+            // If email changed, update Firebase Authentication email
+            const oldEmail = player.email || '';
+            if (newEmail && newEmail !== oldEmail.toLowerCase()) {
+                try {
+                    const user = window.firebase.auth.currentUser;
+                    if (user && user.email.toLowerCase() === oldEmail.toLowerCase()) {
+                        // Verify action with password
+                        const password = prompt('To change your email, please enter your current password:');
+                        if (!password) {
+                            return;
+                        }
+                        
+                        // Re-authenticate
+                        const credential = window.firebase.EmailAuthProvider.credential(user.email, password);
+                        await window.firebase.reauthenticateWithCredential(user, credential);
+                        
+                        // Update email in Firebase Auth
+                        await window.firebase.updateEmail(user, newEmail);
+                        
+                        // Update currentUser email
+                        currentUser.email = newEmail;
+                        currentUser.username = newEmail;
+                        
+                        console.log('✅ Email updated in Firebase Auth');
+                    }
+                } catch (error) {
+                    console.error('Error updating email:', error);
+                    if (error.code === 'auth/wrong-password') {
+                        alert('Incorrect password. Email not changed.');
+                    } else if (error.code === 'auth/email-already-in-use') {
+                        alert('This email is already in use by another account.');
+                    } else if (error.code === 'auth/invalid-email') {
+                        alert('Invalid email format.');
+                    } else {
+                        alert('Error updating email: ' + error.message);
+                    }
+                    return;
+                }
             }
 
             // Update player data
             player.name = newName;
             player.position = newPosition;
             player.age = newAge ? parseInt(newAge) : null;
-            
-            if (newPassword) {
-                player.password = newPassword;
-            }
+            player.email = newEmail || null;
 
             player.lastUpdatedAt = new Date().toISOString();
             player.lastUpdatedBy = 'player-self-update';
 
-            // Update the currentUser.playerId if the name changed
-            if (currentPlayerName !== newName) {
-                currentUser.playerId = newName;
+            // Update the currentUser playerName if the name changed
+            if (currentUser.playerName !== newName) {
                 currentUser.playerName = newName;
             }
 
@@ -2419,6 +2728,55 @@
             
             hidePlayerProfile();
             alert('Profile updated successfully!');
+        }
+
+        async function showChangePassword() {
+            const currentPassword = prompt('Enter your current password:');
+            if (!currentPassword) return;
+
+            const newPassword = prompt('Enter your new password (minimum 6 characters):');
+            if (!newPassword) return;
+
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters long');
+                return;
+            }
+
+            const confirmPassword = prompt('Confirm your new password:');
+            if (newPassword !== confirmPassword) {
+                alert('Passwords do not match');
+                return;
+            }
+
+            try {
+                const user = window.firebase.auth.currentUser;
+                if (!user) {
+                    alert('You must be logged in to change your password');
+                    return;
+                }
+
+                // Re-authenticate user with current password
+                const credential = window.firebase.EmailAuthProvider.credential(
+                    user.email,
+                    currentPassword
+                );
+                
+                await window.firebase.reauthenticateWithCredential(user, credential);
+                
+                // Update password
+                await window.firebase.updatePassword(user, newPassword);
+                
+                alert('Password changed successfully! 🔐');
+            } catch (error) {
+                console.error('Error changing password:', error);
+                if (error.code === 'auth/wrong-password') {
+                    alert('Current password is incorrect');
+                } else if (error.code === 'auth/weak-password') {
+                    alert('New password is too weak');
+                } else {
+                    alert('Error changing password: ' + error.message);
+                }
+            }
         }
 
         // Migration function to move localStorage data to Firebase
@@ -2596,23 +2954,32 @@
                 updateConnectionStatus(true);
             }
 
+            // Load public data (games and players) for everyone
+            console.log('Loading public data...');
+            FirebaseService.setupListeners();
+
             // Setup auth listener if Firebase is initialized
+            console.log('About to setup auth listener...');
             setupAuthListener();
             
-            console.log('App initialization complete. firebaseInitialized =', firebaseInitialized);
+            console.log('App initialization complete. firebaseInitialized =', window.firebaseInitialized);
         }
 
         function setupAuthListener() {
-            if (!firebaseInitialized || !window.firebase.auth) {
+            if (!window.firebaseInitialized || !window.firebase || !window.firebase.auth) {
                 console.log('Cannot setup auth listener - Firebase not initialized');
+                console.log('window.firebaseInitialized:', window.firebaseInitialized);
+                console.log('window.firebase:', window.firebase);
                 return;
             }
 
-            console.log('Setting up Firebase auth listener...');
+            console.log('✅ Setting up Firebase auth listener...');
 
             window.firebase.onAuthStateChanged(window.firebase.auth, async (user) => {
+                console.log('🔔 Auth state changed! User:', user ? user.email : 'null');
+                
                 if (user) {
-                    console.log('User logged in:', user.email);
+                    console.log('✅ User logged in:', user.email);
                     
                     try {
                         const usersQuery = window.firebase.query(
@@ -2645,16 +3012,33 @@
                             );
                         }
                         
+                        // Check if user has a linked player profile
+                        console.log('Checking for linked player. Email:', user.email);
+                        console.log('Available players:', players.length);
+                        console.log('Players with emails:', players.filter(p => p.email).map(p => ({ name: p.name, email: p.email })));
+                        
+                        const linkedPlayer = players.find(p => p.email && p.email.toLowerCase() === user.email.toLowerCase());
+                        
                         currentUser = {
                             id: user.uid,
                             username: user.email,
                             email: user.email,
-                            isAdmin: isAdmin
+                            isAdmin: isAdmin,
+                            linkedPlayer: linkedPlayer ? linkedPlayer.id : null,
+                            playerName: linkedPlayer ? linkedPlayer.name : null
                         };
                         
                         console.log('Current user set to:', currentUser);
+                        if (linkedPlayer) {
+                            console.log('✅ User linked to player profile:', linkedPlayer.name);
+                        } else {
+                            console.log('⚠️ No linked player found for:', user.email);
+                        }
                         saveToLocalStorage();
                         updateUIForUser();
+                        
+                        // Setup Firebase data listeners after login
+                        FirebaseService.setupListeners();
                     } catch (error) {
                         console.error('Error in auth state handler:', error);
                         alert('Error loading user data: ' + error.message);
