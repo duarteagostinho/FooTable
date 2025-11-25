@@ -40,7 +40,7 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         
         const firebaseConfig = {
@@ -56,7 +56,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail };
+        window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail };
         window.firebaseInitialized = true;
         
     </script>
@@ -172,54 +172,59 @@
 
         </div>
 
-        <!-- Dashboard Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-8 lg:gap-10 animate-fade-in">
-            <!-- Recent Games -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/20 transition-all duration-300 transform hover:-translate-y-1">
-                <div class="flex items-center gap-4 mb-8">
-                    <div class="p-3 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 shadow-lg">
-                        <span class="text-white text-2xl">🏟️</span>
-                    </div>
-                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Recent Games</h3>
-                </div>
-                <div id="recentGames" class="space-y-5">
-                    <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No games yet! Add your first game above. 🎯</p>
-                </div>
+        <!-- Dashboard Tabs -->
+        <div class="animate-fade-in">
+            <!-- Tab Navigation -->
+            <div class="flex flex-wrap gap-3 mb-8 lg:mb-10">
+                <button onclick="switchDashboardTab('topPlayers')" id="tab-topPlayers" class="dashboard-tab active px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg">
+                    🏆 Top Players
+                </button>
+                <button onclick="switchDashboardTab('monthly')" id="tab-monthly" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
+                    🌟 Monthly Awards
+                </button>
+                <button onclick="switchDashboardTab('lastGame')" id="tab-lastGame" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
+                    🏟️ Last Game
+                </button>
             </div>
 
-            <!-- Top Players -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/20 transition-all duration-300 transform hover:-translate-y-1">
-                <div class="flex items-center gap-4 mb-8">
-                    <div class="p-3 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg">
-                        <span class="text-white text-2xl">🏆</span>
+            <!-- Tab Content -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 shadow-2xl dark:shadow-gray-900/20">
+                <!-- Top Players Tab -->
+                <div id="content-topPlayers" class="dashboard-content">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="p-3 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg">
+                            <span class="text-white text-2xl">🏆</span>
+                        </div>
+                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Top Players</h3>
                     </div>
-                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Top Players</h3>
+                    <div id="topPlayers">
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No player stats yet! 📊</p>
+                    </div>
                 </div>
-                <div id="topPlayers">
-                    <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No player stats yet! 📊</p>
-                </div>
-            </div>
 
-            <!-- Quick Stats -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/20 transition-all duration-300 transform hover:-translate-y-1 lg:col-span-2 xl:col-span-1">
-                <div class="flex items-center gap-4 mb-8">
-                    <div class="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
-                        <span class="text-white text-2xl">📈</span>
+                <!-- Monthly Awards Tab -->
+                <div id="content-monthly" class="dashboard-content hidden">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="p-3 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 shadow-lg">
+                            <span class="text-white text-2xl">🌟</span>
+                        </div>
+                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Monthly Awards</h3>
                     </div>
-                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Quick Stats</h3>
+                    <div id="playerOfTheMonth" class="space-y-4">
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-8">No games this month yet! 📅</p>
+                    </div>
                 </div>
-                <div class="space-y-6">
-                    <div class="flex justify-between items-center p-5 lg:p-6 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800">
-                        <span class="font-semibold text-lg text-gray-800 dark:text-gray-200">Total Games:</span>
-                        <span id="totalGames" class="font-bold text-3xl text-blue-600 dark:text-blue-400">0</span>
+
+                <!-- Last Game Tab -->
+                <div id="content-lastGame" class="dashboard-content hidden">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="p-3 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 shadow-lg">
+                            <span class="text-white text-2xl">🏟️</span>
+                        </div>
+                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Last Game</h3>
                     </div>
-                    <div class="flex justify-between items-center p-5 lg:p-6 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
-                        <span class="font-semibold text-lg text-gray-800 dark:text-gray-200">Total Players:</span>
-                        <span id="totalPlayers" class="font-bold text-3xl text-green-600 dark:text-green-400">0</span>
-                    </div>
-                    <div class="flex justify-between items-center p-5 lg:p-6 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800">
-                        <span class="font-semibold text-lg text-gray-800 dark:text-gray-200">Average Goals:</span>
-                        <span id="avgGoals" class="font-bold text-3xl text-purple-600 dark:text-purple-400">0</span>
+                    <div id="recentGames">
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">No games yet! Add your first game above. 🎯</p>
                     </div>
                 </div>
             </div>
@@ -254,19 +259,87 @@
                     </div>
 
                     <div class="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                        <strong>New user?</strong> Enter your email and password to create an account.<br>
                         <strong>Existing user?</strong> Login with your credentials.<br>
+                        <strong>New player?</strong> Click Sign Up to create an account.<br>
                         <span class="text-xs mt-1 block">Secured by Firebase Authentication 🔒</span>
                     </div>
                 </form>
                 
-                <div class="flex gap-4 mt-8 justify-end">
-                    <button onclick="hideLogin()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                <div class="flex gap-3 mt-8">
+                    <button onclick="hideLogin()" class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
                         Cancel
                     </button>
-                    <button onclick="login()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                    <button onclick="showSignupModal()" class="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        📝 Sign Up
+                    </button>
+                    <button onclick="login()" class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
                         🔓 Login
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sign Up Modal -->
+    <div id="signupModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="p-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600">
+                        <span class="text-white text-xl">📝</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Create Account</h3>
+                </div>
+                
+                <div id="signupStep1" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📧 Email:</label>
+                        <input type="email" id="signupEmail" placeholder="Enter your email" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div class="text-sm text-gray-600 dark:text-gray-400 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
+                        ⚠️ <strong>Important:</strong> Only emails registered by the administrator can create accounts. Contact admin if your email is not authorized.
+                    </div>
+
+                    <div class="flex gap-3 mt-8">
+                        <button onclick="hideSignupModal()" class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200">
+                            Cancel
+                        </button>
+                        <button onclick="validateEmail()" class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+
+                <div id="signupStep2" class="space-y-6 hidden">
+                    <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg mb-4">
+                        <div class="flex items-center gap-2 text-green-700 dark:text-green-300">
+                            <span class="text-2xl">✅</span>
+                            <div>
+                                <div class="font-semibold">Email Verified!</div>
+                                <div class="text-sm" id="verifiedPlayerName"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🔑 Create Password:</label>
+                        <input type="password" id="signupPassword" placeholder="Min 6 characters" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🔑 Confirm Password:</label>
+                        <input type="password" id="signupPasswordConfirm" placeholder="Re-enter password" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div class="flex gap-3 mt-8">
+                        <button onclick="backToEmailStep()" class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200">
+                            ← Back
+                        </button>
+                        <button onclick="completeSignup()" class="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg">
+                            Create Account
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -360,6 +433,14 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Player of the Match -->
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                        <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">🌟 Player of the Match:</label>
+                        <select id="playerOfTheMatch" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                            <option value="">Select Player of the Match (optional)...</option>
+                        </select>
+                    </div>
                 </form>
                 
                 <div class="flex gap-3 mt-6 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -411,18 +492,6 @@
                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📧 Email (optional - to link to user account):</label>
                         <input type="email" id="playerEmail" placeholder="player@example.com" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Link this player to a user account for profile access</p>
-                    </div>
-                    
-                    <!-- Goals and Assists (only visible during edit) -->
-                    <div id="playerStatsFields" class="hidden grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">⚽ Goals:</label>
-                            <input type="number" id="playerGoals" placeholder="0" min="0" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🅰️ Assists:</label>
-                            <input type="number" id="playerAssists" placeholder="0" min="0" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        </div>
                     </div>
                 </form>
                 
@@ -555,7 +624,15 @@
                     <!-- Content will be populated by JavaScript -->
                 </div>
                 
-                <div class="flex justify-end mt-6">
+                <div class="flex justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex gap-3">
+                        <button onclick="editCurrentGame()" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium transition-all duration-200 flex items-center gap-2" id="editGameBtn">
+                            <span>✏️</span> Edit Game
+                        </button>
+                        <button onclick="deleteCurrentGame()" class="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-all duration-200 flex items-center gap-2" id="deleteGameBtn">
+                            <span>🗑️</span> Delete Game
+                        </button>
+                    </div>
                     <button onclick="closeGameDetails()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200">
                         Close
                     </button>
@@ -571,10 +648,60 @@
         let users = [];
         let currentUser = null;
         let currentEditingPlayer = null;
+        let currentGameIndex = null;
         let firebaseInitialized = false;
         let unsubscribeFunctions = [];
         let cropperImage = null;
         let cropperState = { x: 50, y: 50, size: 200, isDragging: false, isResizing: false, resizeCorner: null, startX: 0, startY: 0 };
+
+        // Gamification System
+        const ACHIEVEMENTS = {
+            HAT_TRICK: { id: 'hat_trick', name: 'Hat-trick Hero', icon: '🎩⚽', description: 'Score 3+ goals in a single game', xp: 100 },
+            ASSIST_KING: { id: 'assist_king', name: 'Assist King', icon: '👑🅰️', description: 'Make 5+ assists in total', xp: 40 },
+            IRON_MAN: { id: 'iron_man', name: 'Iron Man', icon: '💪', description: 'Play 10 games', xp: 50 },
+            FIRST_BLOOD: { id: 'first_blood', name: 'First Blood', icon: '🎯', description: 'Score your first goal', xp: 30 },
+            CENTURY: { id: 'century', name: 'Century Club', icon: '💯', description: 'Play 40 games', xp: 1000 },
+            PERFECT_SEASON: { id: 'perfect_season', name: 'Perfect Season', icon: '🏆✨', description: 'Win 10 games in a row', xp: 300 },
+            TEAM_PLAYER: { id: 'team_player', name: 'Team Player', icon: '🤝', description: 'Make 10+ assists', xp: 50 },
+            GOAL_MACHINE: { id: 'goal_machine', name: 'Goal Machine', icon: '⚽🔥', description: 'Score 50 total goals', xp: 100 },
+            VETERAN: { id: 'veteran', name: 'Veteran', icon: '🎖️', description: 'Play 20 games', xp: 500 },
+            CLEAN_SHEET: { id: 'clean_sheet', name: 'Clean Sheet', icon: '🧤', description: 'Win 5 games without allowing goals (as a defender)', xp: 150 },
+            STAR_PLAYER: { id: 'star_player', name: 'Star Player', icon: '⭐', description: 'Be Player of the Match 5 times', xp: 200 },
+            MVP: { id: 'mvp', name: 'MVP', icon: '🌟', description: 'Be Player of the Match 10 times', xp: 500 }
+        };
+
+        const MILESTONES = [
+            { goals: 1, message: '🎯 First Goal! The journey begins!', xp: 25 },
+            { goals: 5, message: '⚽ 5 Goals! You\'re on fire!', xp: 50 },
+            { goals: 10, message: '🔥 10 Goals! Goal machine!', xp: 75 },
+            { goals: 25, message: '💫 25 Goals! Unstoppable!', xp: 100 },
+            { goals: 50, message: '🌟 50 Goals! Legend status!', xp: 200 },
+            { goals: 100, message: '👑 100 Goals! LEGENDARY!', xp: 500 },
+            { assists: 5, message: '🅰️ 5 Assists! Team player!', xp: 50 },
+            { assists: 10, message: '🤝 10 Assists! Playmaker!', xp: 75 },
+            { assists: 25, message: '✨ 25 Assists! Assist King!', xp: 150 },
+            { games: 10, message: '🎮 10 Games! Getting started!', xp: 50 },
+            { games: 25, message: '💪 25 Games! Regular player!', xp: 100 },
+            { games: 50, message: '🎖️ 50 Games! Veteran!', xp: 200 },
+            { games: 100, message: '💯 100 Games! Hall of Fame!', xp: 500 }
+        ];
+
+        function calculateLevel(xp) {
+            // Level progression: 100 XP per level
+            // Level 1 = 0-99, Level 2 = 100-199, Level 3 = 200-299, etc.
+            return Math.floor(xp / 100) + 1;
+        }
+
+        function getXpForNextLevel(currentXp) {
+            const currentLevel = calculateLevel(currentXp);
+            const xpInCurrentLevel = currentXp % 100;
+            const xpForNextLevel = 100;
+            return {
+                current: xpInCurrentLevel,
+                needed: xpForNextLevel,
+                percentage: (xpInCurrentLevel / xpForNextLevel) * 100
+            };
+        }
 
         // Firebase service class
         class FirebaseService {
@@ -615,7 +742,7 @@
                     await getDocs(testCollection);
                     
                     // Update global Firebase object with all necessary functions
-                    const { addDoc, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                    const { addDoc, doc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
                     
                     window.firebase = { 
                         db, 
@@ -627,6 +754,7 @@
                         updateDoc, 
                         deleteDoc, 
                         query, 
+                        where,
                         orderBy, 
                         onSnapshot, 
                         serverTimestamp,
@@ -668,10 +796,15 @@
                 
                 const unsubGames = window.firebase.onSnapshot(gamesQuery, 
                     (snapshot) => {
-                        games = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        games = snapshot.docs.map(doc => {
+                            const data = doc.data();
+                            // Use the document ID if no id field exists
+                            return { ...data, id: data.id || doc.id };
+                        });
                         updateDisplay();
                     },
                     (error) => {
+                        console.error('Games listener error:', error);
                     }
                 );
                 unsubscribeFunctions.push(unsubGames);
@@ -684,7 +817,7 @@
                 
                 const unsubPlayers = window.firebase.onSnapshot(playersQuery, 
                     (snapshot) => {
-                        players = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        players = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
                         
                         // Re-check for linked player if user is logged in
                         if (currentUser && currentUser.email && !currentUser.linkedPlayer) {
@@ -692,7 +825,7 @@
                             if (linkedPlayer) {
                                 currentUser.linkedPlayer = linkedPlayer.id;
                                 currentUser.playerName = linkedPlayer.name;
-                                saveToLocalStorage();
+                                localStorage.setItem('footable-currentUser', JSON.stringify(currentUser));
                             }
                         }
                         
@@ -700,16 +833,15 @@
                         updateUIForUser();
                     },
                     (error) => {
+                        console.error('Players listener error:', error);
                     }
                 );
                 unsubscribeFunctions.push(unsubPlayers);
             }
 
             static async addGame(gameData) {
-                if (!firebaseInitialized) {
-                    // Fallback to localStorage
-                    games.push({ ...gameData, id: Date.now().toString() });
-                    saveToLocalStorage();
+                if (!window.firebaseInitialized) {
+                    alert('Firebase is not initialized. Please check your connection.');
                     return;
                 }
 
@@ -719,17 +851,69 @@
                         { ...gameData, createdAt: window.firebase.serverTimestamp() }
                     );
                 } catch (error) {
-                    // Fallback to localStorage
-                    games.push({ ...gameData, id: Date.now().toString() });
-                    saveToLocalStorage();
+                    console.error('Error adding game:', error);
+                    alert('Error adding game: ' + error.message);
+                }
+            }
+
+            static async updateGame(gameData) {
+                if (!window.firebaseInitialized) {
+                    alert('Firebase is not initialized. Cannot update game.');
+                    return;
+                }
+
+                try {
+                    const gamesRef = window.firebase.collection(window.firebase.db, 'games');
+                    const q = window.firebase.query(gamesRef, window.firebase.where('id', '==', gameData.id));
+                    const querySnapshot = await window.firebase.getDocs(q);
+                    
+                    if (querySnapshot.empty) {
+                        console.error('Game not found with id:', gameData.id);
+                        alert('Game not found in database.');
+                        return;
+                    }
+                    
+                    const promises = [];
+                    querySnapshot.forEach((docSnap) => {
+                        const updateData = { ...gameData };
+                        delete updateData.id; // Remove the id field from update data
+                        updateData.updatedAt = window.firebase.serverTimestamp();
+                        promises.push(window.firebase.updateDoc(docSnap.ref, updateData));
+                    });
+                    
+                    await Promise.all(promises);
+                } catch (error) {
+                    console.error('Error updating game:', error);
+                    alert('Error updating game: ' + error.message);
+                }
+            }
+            
+            static async deleteGame(gameId) {
+                if (!window.firebaseInitialized) {
+                    alert('Firebase is not initialized. Cannot delete game.');
+                    return;
+                }
+
+                try {
+                    const gamesRef = window.firebase.collection(window.firebase.db, 'games');
+                    const q = window.firebase.query(gamesRef, window.firebase.where('id', '==', gameId));
+                    const querySnapshot = await window.firebase.getDocs(q);
+                    
+                    const promises = [];
+                    querySnapshot.forEach((doc) => {
+                        promises.push(window.firebase.deleteDoc(doc.ref));
+                    });
+                    
+                    await Promise.all(promises);
+                } catch (error) {
+                    console.error('Error deleting game:', error);
+                    alert('Error deleting game: ' + error.message);
                 }
             }
 
             static async addPlayer(playerData) {
-                if (!firebaseInitialized) {
-                    // When Firebase is not initialized, the player is already added to the array in addPlayer()
-                    // Just save to localStorage
-                    saveToLocalStorage();
+                if (!window.firebaseInitialized) {
+                    alert('Firebase is not initialized. Please check your connection.');
                     return;
                 }
 
@@ -739,16 +923,15 @@
                         { ...playerData, createdAt: window.firebase.serverTimestamp() }
                     );
                 } catch (error) {
-                    // Player is already in local array, just save to localStorage as fallback
-                    saveToLocalStorage();
+                    console.error('Error adding player:', error);
+                    alert('Error adding player: ' + error.message);
                 }
             }
 
             static async updatePlayer(playerData) {
                 
                 if (!window.firebaseInitialized) {
-                    // When Firebase is not initialized, just save to localStorage
-                    saveToLocalStorage();
+                    console.error('Firebase not initialized for player update');
                     return;
                 }
 
@@ -768,20 +951,20 @@
                     });
 
                     if (docId) {
+                        const updateData = { ...playerData };
+                        delete updateData.id; // Don't store the custom id in the update
+                        updateData.lastUpdatedAt = window.firebase.serverTimestamp();
+                        updateData.lastUpdatedBy = playerData.lastUpdatedBy || 'unknown';
+                        
                         await window.firebase.updateDoc(
                             window.firebase.doc(window.firebase.db, 'players', docId),
-                            { 
-                                ...playerData, 
-                                lastUpdatedAt: window.firebase.serverTimestamp(),
-                                lastUpdatedBy: playerData.lastUpdatedBy || 'unknown'
-                            }
+                            updateData
                         );
                     } else {
-                        saveToLocalStorage();
+                        console.error('Player document not found:', playerData.name);
                     }
                 } catch (error) {
-                    // Fallback to localStorage
-                    saveToLocalStorage();
+                    console.error('Error updating player:', error);
                 }
             }
         }
@@ -855,35 +1038,309 @@
             }
         }
 
+        function recalculateAllPlayerXP() {
+            // Recalculate XP and achievements for all players based on their current stats
+            players.forEach(player => {
+                // Reset achievements and milestones to recalculate properly
+                player.achievements = [];
+                player.milestonesReached = [];
+                
+                // Reset XP to recalculate from scratch
+                let totalXp = 0;
+                
+                // Base XP from games played (5 XP per game)
+                totalXp += (player.gamesPlayed || 0) * 5;
+                
+                // Bonus XP from wins (10 XP per win)
+                totalXp += (player.wins || 0) * 10;
+                
+                // XP from goals (5 XP per goal)
+                totalXp += (player.goals || 0) * 5;
+                
+                // XP from assists (3 XP per assist)
+                totalXp += (player.assists || 0) * 3;
+                
+                // Check and award achievements (only count once)
+                const newAchievements = [];
+                
+                // Hat-trick Hero - Check if player scored 3+ goals in any game
+                let hasHatTrick = false;
+                games.forEach(game => {
+                    if (game.playerStats && game.playerStats[player.name]) {
+                        const stats = game.playerStats[player.name];
+                        if (stats.goals >= 3) {
+                            hasHatTrick = true;
+                        }
+                    }
+                });
+                if (hasHatTrick && !player.achievements.includes('hat_trick')) {
+                    player.achievements.push('hat_trick');
+                    totalXp += ACHIEVEMENTS.HAT_TRICK.xp;
+                    newAchievements.push('hat_trick');
+                }
+                
+                // First Blood
+                if (player.goals >= 1 && !player.achievements.includes('first_blood')) {
+                    player.achievements.push('first_blood');
+                    totalXp += ACHIEVEMENTS.FIRST_BLOOD.xp;
+                    newAchievements.push('first_blood');
+                }
+                
+                // Assist King - 5+ assists
+                if (player.assists >= 5 && !player.achievements.includes('assist_king')) {
+                    player.achievements.push('assist_king');
+                    totalXp += ACHIEVEMENTS.ASSIST_KING.xp;
+                    newAchievements.push('assist_king');
+                }
+                
+                // Team Player - 10+ assists
+                if (player.assists >= 10 && !player.achievements.includes('team_player')) {
+                    player.achievements.push('team_player');
+                    totalXp += ACHIEVEMENTS.TEAM_PLAYER.xp;
+                    newAchievements.push('team_player');
+                }
+                
+                // Goal Machine - 50+ goals
+                if (player.goals >= 50 && !player.achievements.includes('goal_machine')) {
+                    player.achievements.push('goal_machine');
+                    totalXp += ACHIEVEMENTS.GOAL_MACHINE.xp;
+                    newAchievements.push('goal_machine');
+                }
+                
+                // Iron Man - 10+ games
+                if (player.gamesPlayed >= 10 && !player.achievements.includes('iron_man')) {
+                    player.achievements.push('iron_man');
+                    totalXp += ACHIEVEMENTS.IRON_MAN.xp;
+                    newAchievements.push('iron_man');
+                }
+                
+                // Veteran - 20+ games
+                if (player.gamesPlayed >= 20 && !player.achievements.includes('veteran')) {
+                    player.achievements.push('veteran');
+                    totalXp += ACHIEVEMENTS.VETERAN.xp;
+                    newAchievements.push('veteran');
+                }
+                
+                // Century Club - 40+ games
+                if (player.gamesPlayed >= 40 && !player.achievements.includes('century')) {
+                    player.achievements.push('century');
+                    totalXp += ACHIEVEMENTS.CENTURY.xp;
+                    newAchievements.push('century');
+                }
+                
+                // Count POTM awards from games
+                if (!player.potmAwards) player.potmAwards = 0;
+                let potmCount = 0;
+                games.forEach(game => {
+                    if (game.playerOfTheMatch === player.name) {
+                        potmCount++;
+                    }
+                });
+                player.potmAwards = potmCount;
+                
+                // Star Player - 5+ POTM awards
+                if (player.potmAwards >= 5 && !player.achievements.includes('star_player')) {
+                    player.achievements.push('star_player');
+                    totalXp += ACHIEVEMENTS.STAR_PLAYER.xp;
+                    newAchievements.push('star_player');
+                }
+                
+                // MVP - 10+ POTM awards
+                if (player.potmAwards >= 10 && !player.achievements.includes('mvp')) {
+                    player.achievements.push('mvp');
+                    totalXp += ACHIEVEMENTS.MVP.xp;
+                    newAchievements.push('mvp');
+                }
+                
+                // Check milestones
+                MILESTONES.forEach(milestone => {
+                    const key = milestone.goals ? 'goals' : milestone.assists ? 'assists' : 'games';
+                    const value = milestone.goals || milestone.assists || milestone.games;
+                    const milestoneId = `${key}_${value}`;
+                    
+                    if (player[key] >= value && !player.milestonesReached.includes(milestoneId)) {
+                        player.milestonesReached.push(milestoneId);
+                        totalXp += milestone.xp;
+                    }
+                });
+                
+                player.xp = totalXp;
+                
+                // Always update in Firebase to ensure XP is saved
+                FirebaseService.updatePlayer(player);
+            });
+            
+            updateDisplay();
+        }
+        
+        function getLastPlayerOfTheMatch() {
+            if (games.length === 0) return null;
+            
+            // Get the most recent game
+            const lastGame = games[games.length - 1];
+            
+            // Check if there's a manually selected Player of the Match
+            if (lastGame.playerOfTheMatch) {
+                const playerName = lastGame.playerOfTheMatch;
+                const stats = lastGame.playerStats && lastGame.playerStats[playerName] 
+                    ? lastGame.playerStats[playerName] 
+                    : { goals: 0, assists: 0 };
+                
+                const won = (lastGame.team1.includes(playerName) && lastGame.score1 > lastGame.score2) ||
+                            (lastGame.team2.includes(playerName) && lastGame.score2 > lastGame.score1);
+                
+                return {
+                    playerName,
+                    stats,
+                    won,
+                    player: players.find(p => p.name === playerName),
+                    game: lastGame
+                };
+            }
+            
+            // If no POTM selected, calculate best player from last game
+            const allPlayers = [...lastGame.team1, ...lastGame.team2];
+            const playerScores = [];
+            
+            allPlayers.forEach(playerName => {
+                const stats = lastGame.playerStats && lastGame.playerStats[playerName] 
+                    ? lastGame.playerStats[playerName] 
+                    : { goals: 0, assists: 0 };
+                
+                const won = (lastGame.team1.includes(playerName) && lastGame.score1 > lastGame.score2) ||
+                            (lastGame.team2.includes(playerName) && lastGame.score2 > lastGame.score1);
+                
+                const score = (stats.goals * 3) + (stats.assists * 2) + (won ? 1 : 0);
+                
+                playerScores.push({
+                    playerName,
+                    stats,
+                    won,
+                    score,
+                    player: players.find(p => p.name === playerName),
+                    game: lastGame
+                });
+            });
+            
+            // Sort by score descending and return the highest
+            playerScores.sort((a, b) => b.score - a.score);
+            
+            return playerScores[0];
+        }
+        
+        function calculatePlayerOfTheMonth() {
+            // Get current month and year
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            const currentDay = now.getDate();
+            const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const isLastDay = currentDay === lastDayOfMonth;
+            
+            // Filter games from current month
+            const monthGames = games.filter(game => {
+                const gameDate = new Date(game.date);
+                return gameDate.getMonth() === currentMonth && gameDate.getFullYear() === currentYear;
+            });
+            
+            if (monthGames.length === 0) return null;
+            
+            // Calculate points for each player this month
+            // Formula: (goals * 3) + (assists * 2) + (wins * 1)
+            const playerScores = {};
+            
+            monthGames.forEach(game => {
+                const allPlayers = [...game.team1, ...game.team2];
+                
+                allPlayers.forEach(playerName => {
+                    if (!playerScores[playerName]) {
+                        playerScores[playerName] = { goals: 0, assists: 0, wins: 0, total: 0 };
+                    }
+                    
+                    // Add goals and assists
+                    if (game.playerStats && game.playerStats[playerName]) {
+                        playerScores[playerName].goals += game.playerStats[playerName].goals || 0;
+                        playerScores[playerName].assists += game.playerStats[playerName].assists || 0;
+                    }
+                    
+                    // Add win
+                    if ((game.team1.includes(playerName) && game.score1 > game.score2) ||
+                        (game.team2.includes(playerName) && game.score2 > game.score1)) {
+                        playerScores[playerName].wins++;
+                    }
+                });
+            });
+            
+            // Calculate total scores
+            Object.keys(playerScores).forEach(playerName => {
+                const scores = playerScores[playerName];
+                scores.total = (scores.goals * 3) + (scores.assists * 2) + (scores.wins * 1);
+            });
+            
+            // Sort players by score
+            const sortedPlayers = Object.entries(playerScores)
+                .map(([playerName, scores]) => ({ name: playerName, ...scores }))
+                .sort((a, b) => b.total - a.total);
+            
+            // Return winner only on last day of month, otherwise return top 3
+            return {
+                isLastDay,
+                winner: isLastDay ? sortedPlayers[0] : null,
+                topContenders: !isLastDay ? sortedPlayers.slice(0, 3) : []
+            };
+        }
+
+        function switchDashboardTab(tabName) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.dashboard-tab').forEach(tab => {
+                tab.classList.remove('active', 'bg-gradient-to-r', 'from-yellow-400', 'to-orange-500', 'text-white', 'shadow-lg');
+                tab.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+            });
+            
+            // Hide all content
+            document.querySelectorAll('.dashboard-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Activate selected tab
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            activeTab.classList.add('active', 'bg-gradient-to-r', 'from-yellow-400', 'to-orange-500', 'text-white', 'shadow-lg');
+            activeTab.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+            
+            // Show selected content
+            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+        }
+
         function updateDisplay() {
-            // Update recent games
+            // Update last game
             const recentGamesHTML = games.length === 0 
                 ? '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No games yet! Add your first game above. 🎯</p>'
-                : games.slice(-5).reverse().map((game, index) => `
+                : games.slice(-1).map((game, index) => `
                     <div onclick="showGameDetails(${games.length - 1 - index})" class="p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300 hover:shadow-lg dark:hover:shadow-gray-900/20 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 cursor-pointer">
-                        <div class="flex justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        <div class="flex flex-wrap justify-between text-sm text-gray-500 dark:text-gray-400 mb-4 gap-2">
                             <span class="flex items-center gap-2 font-medium">📅 ${game.date}</span>
                             <span class="flex items-center gap-2 font-medium">📍 ${game.location}</span>
                         </div>
-                        <div class="flex justify-between items-center">
-                            <div class="text-left flex-1">
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div class="text-center md:text-left flex-1 w-full md:w-auto">
                                 <div class="font-bold text-gray-900 dark:text-white mb-2">Team 1</div>
                                 <div class="text-sm text-gray-600 dark:text-gray-300 font-medium">${game.team1.join(', ')}</div>
                             </div>
-                            <div class="text-center px-6">
+                            <div class="text-center px-4 md:px-6">
                                 <div class="font-black text-3xl ${game.score1 > game.score2 ? 'text-green-600 dark:text-green-400' : game.score1 < game.score2 ? 'text-red-500 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'} mb-2">
                                     ${game.score1} - ${game.score2}
                                 </div>
                                 <div class="text-xs font-semibold ${game.score1 > game.score2 ? 'text-green-600 dark:text-green-400' : game.score1 < game.score2 ? 'text-red-500 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}">
                                     ${game.score1 > game.score2 ? '🏆 Team 1 Wins!' : game.score1 < game.score2 ? '🏆 Team 2 Wins!' : '🤝 Draw!'}
                                 </div>
+                                ${game.playerOfTheMatch ? `<div class="mt-2 text-xs text-yellow-600 dark:text-yellow-400 font-semibold">🌟 ${game.playerOfTheMatch}</div>` : ''}
                             </div>
-                            <div class="text-right flex-1">
+                            <div class="text-center md:text-right flex-1 w-full md:w-auto">
                                 <div class="font-bold text-gray-900 dark:text-white mb-2">Team 2</div>
                                 <div class="text-sm text-gray-600 dark:text-gray-300 font-medium">${game.team2.join(', ')}</div>
                             </div>
                         </div>
-                        <div class="mt-3 text-center">
+                        <div class="mt-4 text-center">
                             <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">👆 Click for details</span>
                         </div>
                     </div>
@@ -921,6 +1378,16 @@
                     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6 px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-lg transition-all duration-300 group gap-4">
                         <div class="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
                             <div class="relative flex-shrink-0">
+                                <svg class="absolute -inset-1 w-14 h-14 sm:w-14 sm:h-14" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="4" class="text-gray-200 dark:text-gray-700"/>
+                                    <circle cx="50" cy="50" r="48" fill="none" stroke="url(#levelGradient_${player.id})" stroke-width="4" stroke-dasharray="${(calculateLevel(player.xp || 0) / 100) * 301.59} 301.59" stroke-linecap="round" transform="rotate(-90 50 50)" class="transition-all duration-500"/>
+                                    <defs>
+                                        <linearGradient id="levelGradient_${player.id}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:rgb(168,85,247);stop-opacity:1" />
+                                            <stop offset="100%" style="stop-color:rgb(236,72,153);stop-opacity:1" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
                                 <div class="w-12 h-12 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 ${
                                     index === 0 ? 'border-yellow-400' : index === 1 ? 'border-gray-400' : index === 2 ? 'border-amber-600' : 'border-gray-300'
                                 } shadow-lg transition-transform duration-300 group-hover:scale-110">
@@ -943,6 +1410,9 @@
                                     'bg-blue-500 text-white'
                                 } flex items-center justify-center text-xs font-bold shadow-lg">
                                     ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                                </div>
+                                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-lg whitespace-nowrap">
+                                    ${calculateLevel(player.xp || 0)}
                                 </div>
                             </div>
                             <div class="flex-1 min-w-0">
@@ -982,14 +1452,160 @@
             
             document.getElementById('topPlayers').innerHTML = topPlayersHTML;
 
-            // Update stats
-            document.getElementById('totalGames').textContent = games.length;
-            document.getElementById('totalPlayers').textContent = players.length;
+            // Update Player of the Month and Last Player of the Match
+            const potmData = calculatePlayerOfTheMonth();
+            const lpm = getLastPlayerOfTheMatch();
+            const potmContainer = document.getElementById('playerOfTheMonth');
             
-            const avgGoals = games.length > 0 
-                ? (games.reduce((sum, game) => sum + game.score1 + game.score2, 0) / games.length).toFixed(1)
-                : '0';
-            document.getElementById('avgGoals').textContent = avgGoals;
+            if (potmData) {
+                if (potmData.isLastDay && potmData.winner) {
+                    // Show winner on last day of month
+                    const potm = potmData.winner;
+                    const topPlayer = players.find(p => p.name === potm.name);
+                    
+                    potmContainer.innerHTML = `
+                        <!-- Player of the Month Winner -->
+                        <div class="bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 rounded-xl p-6 shadow-lg">
+                            <div class="text-center space-y-3">
+                                <div class="inline-block">
+                                    ${topPlayer && topPlayer.profilePicture ? 
+                                        `<img src="${topPlayer.profilePicture}" alt="${potm.name}" class="w-20 h-20 rounded-full border-4 border-white shadow-2xl mx-auto">` :
+                                        `<div class="w-20 h-20 rounded-full border-4 border-white shadow-2xl mx-auto bg-white/30 flex items-center justify-center text-3xl font-bold text-yellow-900">
+                                            ${potm.name.charAt(0).toUpperCase()}
+                                        </div>`
+                                    }
+                                </div>
+                                <div>
+                                    <div class="text-xs font-semibold text-yellow-900/70 mb-1">🏆 PLAYER OF THE MONTH</div>
+                                    <div class="text-xl font-black text-yellow-900 mb-2">${potm.name}</div>
+                                    <div class="flex justify-center gap-3 text-yellow-900">
+                                        <div class="text-center">
+                                            <div class="text-xl font-bold">${potm.goals}</div>
+                                            <div class="text-xs">Goals</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-xl font-bold">${potm.assists}</div>
+                                            <div class="text-xs">Assists</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-xl font-bold">${potm.wins}</div>
+                                            <div class="text-xs">Wins</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 text-sm text-yellow-900/80">
+                                        Score: ${potm.total} pts
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                } else if (potmData.topContenders && potmData.topContenders.length > 0) {
+                    // Show top 3 contenders during the month
+                    potmContainer.innerHTML = `
+                        <div class="bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 rounded-xl p-6 shadow-lg">
+                            <div class="text-center mb-4">
+                                <div class="text-xs font-semibold text-yellow-900/70 mb-1">🏆 PLAYER OF THE MONTH CONTENDERS</div>
+                            </div>
+                            <div class="space-y-3">
+                                ${potmData.topContenders.map((contender, index) => {
+                                    const player = players.find(p => p.name === contender.name);
+                                    const medals = ['🥇', '🥈', '🥉'];
+                                    return `
+                                    <div class="bg-white/20 rounded-lg p-3 flex items-center gap-3">
+                                        <div class="text-2xl">${medals[index]}</div>
+                                        ${player && player.profilePicture ? 
+                                            `<img src="${player.profilePicture}" alt="${contender.name}" class="w-12 h-12 rounded-full border-2 border-white shadow-lg">` :
+                                            `<div class="w-12 h-12 rounded-full border-2 border-white shadow-lg bg-white/30 flex items-center justify-center text-lg font-bold text-yellow-900">
+                                                ${contender.name.charAt(0).toUpperCase()}
+                                            </div>`
+                                        }
+                                        <div class="flex-1 text-left">
+                                            <div class="font-bold text-yellow-900">${contender.name}</div>
+                                            <div class="text-xs text-yellow-900/70">${contender.goals}G • ${contender.assists}A • ${contender.wins}W</div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="font-bold text-lg text-yellow-900">${contender.total}</div>
+                                            <div class="text-xs text-yellow-900/70">pts</div>
+                                        </div>
+                                    </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>`;
+                }
+                
+                // Add Last Player of the Match section
+                potmContainer.innerHTML += lpm ? `
+                    <!-- Last Player of the Match -->
+                    <div class="bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600 rounded-xl p-6 shadow-lg">
+                        <div class="text-center space-y-3">
+                            <div class="inline-block">
+                                ${lpm.player && lpm.player.profilePicture ? 
+                                    `<img src="${lpm.player.profilePicture}" alt="${lpm.playerName}" class="w-16 h-16 rounded-full border-4 border-white shadow-2xl mx-auto">` :
+                                    `<div class="w-16 h-16 rounded-full border-4 border-white shadow-2xl mx-auto bg-white/30 flex items-center justify-center text-2xl font-bold text-gray-900">
+                                        ${lpm.playerName.charAt(0).toUpperCase()}
+                                    </div>`
+                                }
+                            </div>
+                            <div>
+                                <div class="text-xs font-semibold text-gray-900/70 mb-1">⚡ LAST PLAYER OF THE MATCH</div>
+                                <div class="text-lg font-black text-gray-900 mb-2">${lpm.playerName}</div>
+                                <div class="flex justify-center gap-3 text-gray-900">
+                                    <div class="text-center">
+                                        <div class="text-lg font-bold">${lpm.stats.goals}</div>
+                                        <div class="text-xs">Goals</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-lg font-bold">${lpm.stats.assists}</div>
+                                        <div class="text-xs">Assists</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-lg font-bold">${lpm.won ? '1' : '0'}</div>
+                                        <div class="text-xs">Win</div>
+                                    </div>
+                                </div>
+                                <div class="mt-2 text-sm text-gray-900/80">
+                                    ${lpm.game.date} • ${lpm.game.location}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ` : '';
+                
+                // Add Best Match section (highest scoring game)
+                const bestGame = [...games].sort((a, b) => (b.score1 + b.score2) - (a.score1 + a.score2))[0];
+                if (bestGame) {
+                    potmContainer.innerHTML += `
+                        <!-- Best Match -->
+                        <div class="bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 rounded-xl p-6 shadow-lg">
+                            <div class="text-center space-y-3">
+                                <div>
+                                    <div class="text-xs font-semibold text-blue-900/70 mb-1">🔥 BEST MATCH</div>
+                                    <div class="text-lg font-black text-blue-900 mb-2">${bestGame.score1} - ${bestGame.score2}</div>
+                                    <div class="text-sm text-blue-900/80 mb-3">
+                                        ${bestGame.score1 + bestGame.score2} total goals
+                                    </div>
+                                    <div class="flex justify-center gap-4 text-blue-900 text-xs">
+                                        <div class="text-center">
+                                            <div class="font-semibold mb-1">Team 1</div>
+                                            <div>${bestGame.team1.join(', ')}</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="font-semibold mb-1">Team 2</div>
+                                            <div>${bestGame.team2.join(', ')}</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 text-xs text-blue-900/70">
+                                        ${bestGame.date} • ${bestGame.location}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                potmContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8">No games this month yet! 📅</p>';
+            }
+
         }
 
         // Global Search Functions
@@ -1197,6 +1813,7 @@
         }
 
         function showGameDetails(gameIndex) {
+            currentGameIndex = gameIndex;
             const game = games[gameIndex];
             if (!game) return;
 
@@ -1245,6 +1862,11 @@
                         <div class="text-sm font-semibold ${game.score1 > game.score2 ? 'text-green-600 dark:text-green-400' : game.score1 < game.score2 ? 'text-red-500 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}">
                             ${game.score1 > game.score2 ? '🏆 Team 1 Wins!' : game.score1 < game.score2 ? '🏆 Team 2 Wins!' : '🤝 Draw!'}
                         </div>
+                        ${game.playerOfTheMatch ? `
+                            <div class="mt-4 inline-block bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full shadow-lg">
+                                <span class="font-bold">🌟 Player of the Match: ${game.playerOfTheMatch}</span>
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
 
@@ -1256,8 +1878,11 @@
                         </h4>
                         <div class="space-y-3">
                             ${team1Stats.map(player => `
-                                <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3">
-                                    <span class="font-medium text-gray-900 dark:text-white">${player.name}</span>
+                                <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3 ${game.playerOfTheMatch === player.name ? 'ring-2 ring-yellow-400' : ''}">
+                                    <span class="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                                        ${player.name}
+                                        ${game.playerOfTheMatch === player.name ? '<span class="text-xl">🌟</span>' : ''}
+                                    </span>
                                     <div class="flex items-center gap-3 text-sm">
                                         ${player.goals > 0 ? `<span class="text-blue-600 dark:text-blue-400 font-semibold">⚽ ${player.goals}</span>` : ''}
                                         ${player.assists > 0 ? `<span class="text-purple-600 dark:text-purple-400 font-semibold">🅰️ ${player.assists}</span>` : ''}
@@ -1275,8 +1900,11 @@
                         </h4>
                         <div class="space-y-3">
                             ${team2Stats.map(player => `
-                                <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3">
-                                    <span class="font-medium text-gray-900 dark:text-white">${player.name}</span>
+                                <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3 ${game.playerOfTheMatch === player.name ? 'ring-2 ring-yellow-400' : ''}">
+                                    <span class="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                                        ${player.name}
+                                        ${game.playerOfTheMatch === player.name ? '<span class="text-xl">🌟</span>' : ''}
+                                    </span>
                                     <div class="flex items-center gap-3 text-sm">
                                         ${player.goals > 0 ? `<span class="text-blue-600 dark:text-blue-400 font-semibold">⚽ ${player.goals}</span>` : ''}
                                         ${player.assists > 0 ? `<span class="text-purple-600 dark:text-purple-400 font-semibold">🅰️ ${player.assists}</span>` : ''}
@@ -1297,6 +1925,160 @@
         function closeGameDetails() {
             document.getElementById('gameDetailsModal').classList.add('hidden');
             document.getElementById('gameDetailsModal').classList.remove('flex');
+            currentGameIndex = null;
+        }
+        
+        function editCurrentGame() {
+            if (currentGameIndex === null) return;
+            
+            if (!currentUser?.isAdmin) {
+                alert('Only administrators can edit games');
+                return;
+            }
+            
+            const game = games[currentGameIndex];
+            if (!game) return;
+            
+            // Populate the game form with current data
+            document.getElementById('gameDate').value = game.date;
+            document.getElementById('location').value = game.location;
+            document.getElementById('score1').value = game.score1;
+            document.getElementById('score2').value = game.score2;
+            
+            // Set team players
+            selectedTeam1Players = [...game.team1];
+            selectedTeam2Players = [...game.team2];
+            updateTeamDisplay('team1');
+            updateTeamDisplay('team2');
+            
+            // Trigger goal inputs generation
+            updateGoalInputs();
+            
+            // Populate player stats
+            if (game.playerStats) {
+                Object.keys(game.playerStats).forEach(playerName => {
+                    const stats = game.playerStats[playerName];
+                    const playerId = playerName.replace(/\s+/g, '_');
+                    const team = game.team1.includes(playerName) ? 'team1' : 'team2';
+                    
+                    setTimeout(() => {
+                        const goalsInput = document.getElementById(`${team}_${playerId}_goals`);
+                        const assistsInput = document.getElementById(`${team}_${playerId}_assists`);
+                        
+                        if (goalsInput) goalsInput.value = stats.goals || 0;
+                        if (assistsInput) assistsInput.value = stats.assists || 0;
+                    }, 100);
+                });
+            }
+            
+            // Set POTM
+            setTimeout(() => {
+                updatePlayerOfTheMatchDropdown();
+                if (game.playerOfTheMatch) {
+                    document.getElementById('playerOfTheMatch').value = game.playerOfTheMatch;
+                }
+            }, 150);
+            
+            // Mark as editing mode
+            document.getElementById('gameModal').dataset.editMode = 'true';
+            document.getElementById('gameModal').dataset.editIndex = currentGameIndex;
+            
+            // Close details and show edit modal
+            closeGameDetails();
+            document.getElementById('gameModal').classList.remove('hidden');
+            document.getElementById('gameModal').classList.add('flex');
+        }
+        
+        function deleteCurrentGame() {
+            if (currentGameIndex === null) return;
+            
+            if (!currentUser?.isAdmin) {
+                alert('Only administrators can delete games');
+                return;
+            }
+            
+            const game = games[currentGameIndex];
+            if (!game) return;
+            
+            if (!confirm(`Are you sure you want to delete this game?\n\nDate: ${game.date}\nScore: ${game.score1} - ${game.score2}\n\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            // Remove game from array
+            const gameId = game.id;
+            games.splice(currentGameIndex, 1);
+            
+            // Delete from Firebase
+            FirebaseService.deleteGame(gameId);
+            
+            // Recalculate player stats
+            recalculateAllPlayerStats();
+            
+            // Update display
+            updateDisplay();
+            closeGameDetails();
+            
+            alert('Game deleted successfully!');
+        }
+        
+        function recalculateAllPlayerStats() {
+            // Reset all player stats (but keep achievements/milestones for recalculation)
+            players.forEach(player => {
+                player.gamesPlayed = 0;
+                player.wins = 0;
+                player.draws = 0;
+                player.losses = 0;
+                player.goals = 0;
+                player.assists = 0;
+                player.potmAwards = 0;
+                // Don't reset achievements and milestones here - they'll be recalculated properly
+                if (!player.achievements) player.achievements = [];
+                if (!player.milestonesReached) player.milestonesReached = [];
+            });
+            
+            // Recalculate from all games
+            games.forEach(game => {
+                const allPlayers = [...game.team1, ...game.team2];
+                
+                allPlayers.forEach(playerName => {
+                    let player = players.find(p => p.name === playerName);
+                    if (!player) return;
+                    
+                    player.gamesPlayed++;
+                    
+                    // Update win/draw/loss
+                    if (game.score1 === game.score2) {
+                        player.draws++;
+                    } else if (
+                        (game.team1.includes(playerName) && game.score1 > game.score2) ||
+                        (game.team2.includes(playerName) && game.score2 > game.score1)
+                    ) {
+                        player.wins++;
+                    } else {
+                        player.losses++;
+                    }
+                    
+                    // Update goals and assists
+                    if (game.playerStats && game.playerStats[playerName]) {
+                        const stats = game.playerStats[playerName];
+                        player.goals += stats.goals || 0;
+                        player.assists += stats.assists || 0;
+                    }
+                    
+                    // Track POTM
+                    if (game.playerOfTheMatch === playerName) {
+                        player.potmAwards++;
+                    }
+                });
+            });
+            
+            // Recalculate XP and achievements (with new balanced values)
+            recalculateAllPlayerXP();
+            
+            // Update all players in Firebase
+            players.forEach(player => {
+                FirebaseService.updatePlayer(player);
+            });
         }
 
         async function login() {
@@ -1321,76 +2103,161 @@
             }
 
             try {
-                // Try to sign in first
+                // Try to sign in
                 const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
+                
+                // After successful login, verify the user exists in our users collection
+                const usersQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'users')
+                );
+                const snapshot = await window.firebase.getDocs(usersQuery);
+                
+                let authorizedUser = false;
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.email === email) {
+                        authorizedUser = true;
+                    }
+                });
+                
+                // If user is not in our database, sign them out and reject
+                if (!authorizedUser) {
+                    await window.firebase.signOut(window.firebase.auth);
+                    alert('❌ Unauthorized account.\n\nThis email is not registered in the system. Please contact the administrator or use the Sign Up button with an authorized email.');
+                    return;
+                }
+                
                 hideLogin();
             } catch (error) {
-                
                 // Handle different error types
                 if (error.code === 'auth/wrong-password') {
-                    alert('Incorrect password. Please try again.');
+                    alert('❌ Incorrect password. Please try again.');
                 } else if (error.code === 'auth/invalid-credential') {
-                    alert('Invalid email or password. Please check your credentials and try again.');
+                    alert('❌ Invalid email or password. Please check your credentials and try again.');
                 } else if (error.code === 'auth/user-not-found') {
-                    // Only offer to create account if truly not found
-                    if (confirm('Account not found. Create new account with this email?')) {
-                        await createAccount();
-                    }
+                    alert('❌ Account not found.\n\nIf you don\'t have an account yet, please use the "Sign Up" button to create one.');
                 } else if (error.code === 'auth/invalid-email') {
-                    alert('Invalid email format. Please enter a valid email address.');
+                    alert('❌ Invalid email format. Please enter a valid email address.');
                 } else if (error.code === 'auth/too-many-requests') {
-                    alert('Too many failed login attempts. Please try again later or reset your password.');
+                    alert('❌ Too many failed login attempts. Please try again later.');
                 } else {
-                    alert('Login failed: ' + error.message);
+                    alert('❌ Login failed: ' + error.message);
                 }
             }
         }
 
-        async function createAccount() {
-            const email = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value.trim();
+        let validatedEmail = null;
+        let validatedPlayer = null;
+
+        function showSignupModal() {
+            hideLogin();
+            document.getElementById('signupModal').classList.remove('hidden');
+            document.getElementById('signupModal').classList.add('flex');
+            document.getElementById('signupStep1').classList.remove('hidden');
+            document.getElementById('signupStep2').classList.add('hidden');
+            document.getElementById('signupEmail').value = '';
+            validatedEmail = null;
+            validatedPlayer = null;
+        }
+
+        function hideSignupModal() {
+            document.getElementById('signupModal').classList.add('hidden');
+            document.getElementById('signupModal').classList.remove('flex');
+            document.getElementById('signupEmail').value = '';
+            document.getElementById('signupPassword').value = '';
+            document.getElementById('signupPasswordConfirm').value = '';
+            validatedEmail = null;
+            validatedPlayer = null;
+        }
+
+        function validateEmail() {
+            const email = document.getElementById('signupEmail').value.trim();
+
+            if (!email) {
+                alert('Please enter your email address');
+                return;
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Please enter a valid email address');
+                return;
+            }
+
+            // Check if email exists in players collection
+            const playerExists = players.find(p => p.email && p.email.toLowerCase() === email.toLowerCase());
+            
+            if (!playerExists) {
+                alert('❌ Email not authorized.\n\nThis email has not been added by the administrator. Please contact the admin to add your email to the system first.');
+                return;
+            }
+
+            // Email is valid, proceed to password step
+            validatedEmail = email;
+            validatedPlayer = playerExists;
+            document.getElementById('verifiedPlayerName').textContent = `Welcome ${playerExists.name}!`;
+            document.getElementById('signupStep1').classList.add('hidden');
+            document.getElementById('signupStep2').classList.remove('hidden');
+        }
+
+        function backToEmailStep() {
+            document.getElementById('signupStep2').classList.add('hidden');
+            document.getElementById('signupStep1').classList.remove('hidden');
+            document.getElementById('signupPassword').value = '';
+            document.getElementById('signupPasswordConfirm').value = '';
+        }
+
+        async function completeSignup() {
+            const password = document.getElementById('signupPassword').value.trim();
+            const passwordConfirm = document.getElementById('signupPasswordConfirm').value.trim();
+
+            if (!password || !passwordConfirm) {
+                alert('Please enter and confirm your password');
+                return;
+            }
 
             if (password.length < 6) {
                 alert('Password must be at least 6 characters');
                 return;
             }
 
+            if (password !== passwordConfirm) {
+                alert('Passwords do not match. Please try again.');
+                return;
+            }
+
+            if (!window.firebase || !window.firebase.auth) {
+                alert('Firebase not initialized. Please refresh the page.');
+                return;
+            }
+
             try {
-                const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, password);
+                // Create Firebase auth account
+                const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, validatedEmail, password);
                 
-                // Check if user document already exists in Firestore
-                const usersQuery = window.firebase.query(
-                    window.firebase.collection(window.firebase.db, 'users')
-                );
-                const snapshot = await window.firebase.getDocs(usersQuery);
-                
-                let existingUser = null;
-                snapshot.docs.forEach(doc => {
-                    const data = doc.data();
-                    if (data.email === email) {
-                        existingUser = data;
+                // Create user document in Firestore
+                await window.firebase.addDoc(
+                    window.firebase.collection(window.firebase.db, 'users'),
+                    {
+                        email: validatedEmail,
+                        isAdmin: false,
+                        createdAt: window.firebase.serverTimestamp()
                     }
-                });
+                );
                 
-                // Only create new user document if it doesn't exist
-                if (!existingUser) {
-                    await window.firebase.addDoc(
-                        window.firebase.collection(window.firebase.db, 'users'),
-                        {
-                            email: email,
-                            isAdmin: false,
-                            createdAt: window.firebase.serverTimestamp()
-                        }
-                    );
-                } else {
-                }
-                
-                alert('Account created successfully! You are now logged in.');
-                hideLogin();
+                alert(`✅ Account created successfully!\n\nWelcome ${validatedPlayer.name}! You are now logged in.`);
+                hideSignupModal();
             } catch (error) {
-                alert('Failed to create account: ' + error.message);
+                if (error.code === 'auth/email-already-in-use') {
+                    alert('❌ This email already has an account.\n\nPlease use the Login button instead.');
+                } else {
+                    alert('Failed to create account: ' + error.message);
+                }
             }
         }
+
+
 
         async function logout() {
             
@@ -1404,11 +2271,10 @@
             try {
                 await window.firebase.signOut(window.firebase.auth);
                 currentUser = null;
-                games = [];
-                players = [];
                 saveToLocalStorage();
                 updateUIForUser();
-                updateDisplay();
+                // Data will automatically reload through existing listeners
+                // No need to manually reload since setupListeners is already active
             } catch (error) {
                 alert('Logout failed: ' + error.message);
             }
@@ -1446,8 +2312,25 @@
                 
                 userInfo.innerHTML = `
                     <div class="flex items-center gap-2 sm:gap-3 md:gap-4">
-                        <div class="${clickableClass}" ${clickHandler}>
+                        <div class="relative ${clickableClass}" ${clickHandler}>
+                            ${linkedPlayer ? `
+                            <svg class="absolute -inset-0.5 w-9 h-9 sm:w-11 sm:h-11" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="5" class="text-gray-200 dark:text-gray-700"/>
+                                <circle cx="50" cy="50" r="48" fill="none" stroke="url(#navLevelGradient)" stroke-width="5" stroke-dasharray="${(calculateLevel(linkedPlayer.xp || 0) / 100) * 301.59} 301.59" stroke-linecap="round" transform="rotate(-90 50 50)" class="transition-all duration-500"/>
+                                <defs>
+                                    <linearGradient id="navLevelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:rgb(168,85,247);stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:rgb(236,72,153);stop-opacity:1" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            ` : ''}
                             ${profileImageHTML}
+                            ${linkedPlayer ? `
+                            <div class="absolute -bottom-0.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-1 py-0.5 rounded-full shadow-lg" style="font-size: 0.65rem;">
+                                ${calculateLevel(linkedPlayer.xp || 0)}
+                            </div>
+                            ` : ''}
                         </div>
                         <div class="hidden sm:flex flex-col">
                             <span class="font-semibold text-gray-900 dark:text-white">${displayName}</span>
@@ -1605,9 +2488,18 @@
             if (totalGoals > 0 && (selectedTeam1Players.length > 0 || selectedTeam2Players.length > 0)) {
                 goalSection.classList.remove('hidden');
                 generatePlayerStatsInputs();
+                updatePlayerOfTheMatchDropdown();
             } else {
                 goalSection.classList.add('hidden');
             }
+        }
+        
+        function updatePlayerOfTheMatchDropdown() {
+            const potmSelect = document.getElementById('playerOfTheMatch');
+            const allPlayers = [...selectedTeam1Players, ...selectedTeam2Players];
+            
+            potmSelect.innerHTML = '<option value="">Select Player of the Match (optional)...</option>' +
+                allPlayers.map(player => `<option value="${player}">${player}</option>`).join('');
         }
 
         function generatePlayerStatsInputs() {
@@ -1658,6 +2550,10 @@
             document.getElementById('gameModal').classList.remove('flex');
             document.getElementById('gameForm').reset();
             
+            // Reset edit mode
+            delete document.getElementById('gameModal').dataset.editMode;
+            delete document.getElementById('gameModal').dataset.editIndex;
+            
             // Reset team selections
             selectedTeam1Players = [];
             selectedTeam2Players = [];
@@ -1681,10 +2577,6 @@
             document.getElementById('playerModal').classList.add('hidden');
             document.getElementById('playerModal').classList.remove('flex');
             document.getElementById('playerForm').reset();
-            
-            // Hide stats fields when closing modal
-            document.getElementById('playerStatsFields').classList.add('hidden');
-            document.getElementById('playerStatsFields').classList.remove('grid');
             
             // Reset modal to "Add Player" state if it was in edit mode
             if (currentEditingPlayer) {
@@ -1713,6 +2605,9 @@
         }
 
         function addGame() {
+            const isEditMode = document.getElementById('gameModal').dataset.editMode === 'true';
+            const editIndex = parseInt(document.getElementById('gameModal').dataset.editIndex);
+            
             const date = document.getElementById('gameDate').value;
             const score1 = parseInt(document.getElementById('score1').value);
             const score2 = parseInt(document.getElementById('score2').value);
@@ -1776,29 +2671,63 @@
                 return;
             }
 
-            const game = {
-                id: Date.now().toString(),
-                date,
-                team1: [...selectedTeam1Players],
-                team2: [...selectedTeam2Players],
-                score1,
-                score2,
-                location,
-                playerStats,
-                addedBy: currentUser.username,
-                addedAt: new Date().toISOString()
-            };
+            // Get Player of the Match
+            const playerOfTheMatch = document.getElementById('playerOfTheMatch').value || null;
+            
+            if (isEditMode && editIndex >= 0) {
+                // Edit existing game
+                const existingGame = games[editIndex];
+                const game = {
+                    ...existingGame,
+                    date,
+                    team1: [...selectedTeam1Players],
+                    team2: [...selectedTeam2Players],
+                    score1,
+                    score2,
+                    location,
+                    playerStats,
+                    playerOfTheMatch,
+                    editedBy: currentUser.username,
+                    editedAt: new Date().toISOString()
+                };
+                
+                games[editIndex] = game;
+                
+                // Update in Firebase
+                FirebaseService.updateGame(game);
+                
+                // Recalculate all player stats
+                recalculateAllPlayerStats();
+                
+                updateDisplay();
+                hideAddGameModal();
+                alert('Game updated successfully!');
+            } else {
+                // Add new game
+                const game = {
+                    id: Date.now().toString(),
+                    date,
+                    team1: [...selectedTeam1Players],
+                    team2: [...selectedTeam2Players],
+                    score1,
+                    score2,
+                    location,
+                    playerStats,
+                    playerOfTheMatch,
+                    addedBy: currentUser.username,
+                    addedAt: new Date().toISOString()
+                };
 
-            // Use Firebase service to add game
-            FirebaseService.addGame(game);
-            
-            // Update player statistics
-            updatePlayerStats(game);
-            
-            saveToLocalStorage();
-            updateDisplay();
-            hideAddGameModal();
-            alert('Game added successfully!');
+                // Use Firebase service to add game
+                FirebaseService.addGame(game);
+                
+                // Update player statistics
+                updatePlayerStats(game);
+                
+                updateDisplay();
+                hideAddGameModal();
+                alert('Game added successfully!');
+            }
         }
 
         function addPlayer() {
@@ -1847,10 +2776,9 @@
             // Add to players array
             players.push(newPlayer);
 
-            // Use Firebase service to add player (this handles both Firebase and localStorage)
+            // Use Firebase service to add player
             FirebaseService.addPlayer(newPlayer);
             
-            saveToLocalStorage();
             updateDisplay();
             hideAddPlayerModal();
             
@@ -1954,12 +2882,6 @@
             document.getElementById('playerPosition').value = player.position || '';
             document.getElementById('playerAge').value = player.age || '';
             document.getElementById('playerEmail').value = player.email || '';
-            document.getElementById('playerGoals').value = player.goals || 0;
-            document.getElementById('playerAssists').value = player.assists || 0;
-            
-            // Show stats fields for editing
-            document.getElementById('playerStatsFields').classList.remove('hidden');
-            document.getElementById('playerStatsFields').classList.add('grid');
             
             // Change modal title and button text
             const modalTitle = document.querySelector('#playerModal h3');
@@ -1982,8 +2904,6 @@
             const position = document.getElementById('playerPosition').value.trim();
             const age = document.getElementById('playerAge').value.trim();
             const email = document.getElementById('playerEmail').value.trim();
-            const goals = parseInt(document.getElementById('playerGoals').value) || 0;
-            const assists = parseInt(document.getElementById('playerAssists').value) || 0;
 
             if (!name) {
                 alert('Player name is required');
@@ -2008,13 +2928,11 @@
                 return;
             }
 
-            // Update all editable fields
+            // Update all editable fields (stats are calculated from games only)
             currentEditingPlayer.name = name;
             currentEditingPlayer.position = position;
             currentEditingPlayer.age = age ? parseInt(age) : null;
             currentEditingPlayer.email = email || null;
-            currentEditingPlayer.goals = goals;
-            currentEditingPlayer.assists = assists;
             // Add update tracking
             currentEditingPlayer.lastUpdatedAt = new Date().toISOString();
             currentEditingPlayer.lastUpdatedBy = currentUser.username;
@@ -2026,10 +2944,9 @@
                 players[playerIndex] = currentEditingPlayer;
             }
 
-            // Use Firebase service to update player (this handles both Firebase and localStorage)
+            // Use Firebase service to update player
             await FirebaseService.updatePlayer(currentEditingPlayer);
             
-            saveToLocalStorage();
             updateDisplay();
             
             // Reset modal for next use BEFORE hiding it
@@ -2185,6 +3102,7 @@
                         losses: 0,
                         goals: 0,
                         assists: 0,
+                        potmAwards: 0,
                         createdAt: new Date().toISOString(),
                         createdBy: 'auto-generated'
                     };
@@ -2213,14 +3131,197 @@
                     player.goals += stats.goals || 0;
                     player.assists += stats.assists || 0;
                 }
+                
+                // Track Player of the Match awards
+                if (!player.potmAwards) player.potmAwards = 0;
+                if (game.playerOfTheMatch === playerName) {
+                    player.potmAwards++;
+                }
 
                 // Add update tracking
                 player.lastUpdatedAt = new Date().toISOString();
                 player.lastUpdatedBy = 'auto-updated-from-game';
 
+                // Check for achievements and milestones
+                checkAchievementsAndMilestones(player, game, playerName);
+
                 // Update player in Firebase
                 FirebaseService.updatePlayer(player);
             });
+        }
+
+        function checkAchievementsAndMilestones(player, game, playerName) {
+            if (!player.achievements) player.achievements = [];
+            if (!player.xp) player.xp = 0;
+            if (!player.milestonesReached) player.milestonesReached = [];
+
+            const newAchievements = [];
+            const newMilestones = [];
+            let totalXpGained = 0;
+
+            // Get player stats from this game
+            const stats = game.playerStats && game.playerStats[playerName] ? game.playerStats[playerName] : { goals: 0, assists: 0 };
+
+            // Base XP for playing a game
+            const gameXp = 5;
+            totalXpGained += gameXp;
+
+            // Bonus XP for winning
+            if ((game.team1.includes(playerName) && game.score1 > game.score2) ||
+                (game.team2.includes(playerName) && game.score2 > game.score1)) {
+                totalXpGained += 10;
+            }
+
+            // XP from goals and assists
+            if (stats.goals) {
+                totalXpGained += stats.goals * 5;
+            }
+            if (stats.assists) {
+                totalXpGained += stats.assists * 3;
+            }
+
+            // Check achievements
+            // Hat-trick Hero - 3+ goals in a game
+            if (stats.goals >= 3 && !player.achievements.includes('hat_trick')) {
+                player.achievements.push('hat_trick');
+                totalXpGained += ACHIEVEMENTS.HAT_TRICK.xp;
+                newAchievements.push(ACHIEVEMENTS.HAT_TRICK);
+            }
+
+            // First Blood - first goal ever
+            if (player.goals === 1 && !player.achievements.includes('first_blood')) {
+                player.achievements.push('first_blood');
+                totalXpGained += ACHIEVEMENTS.FIRST_BLOOD.xp;
+                newAchievements.push(ACHIEVEMENTS.FIRST_BLOOD);
+            }
+
+            // Assist King - 5+ total assists
+            if (player.assists >= 5 && !player.achievements.includes('assist_king')) {
+                player.achievements.push('assist_king');
+                totalXpGained += ACHIEVEMENTS.ASSIST_KING.xp;
+                newAchievements.push(ACHIEVEMENTS.ASSIST_KING);
+            }
+
+            // Team Player - 10+ total assists
+            if (player.assists >= 10 && !player.achievements.includes('team_player')) {
+                player.achievements.push('team_player');
+                totalXpGained += ACHIEVEMENTS.TEAM_PLAYER.xp;
+                newAchievements.push(ACHIEVEMENTS.TEAM_PLAYER);
+            }
+
+            // Goal Machine - 50 total goals
+            if (player.goals >= 50 && !player.achievements.includes('goal_machine')) {
+                player.achievements.push('goal_machine');
+                totalXpGained += ACHIEVEMENTS.GOAL_MACHINE.xp;
+                newAchievements.push(ACHIEVEMENTS.GOAL_MACHINE);
+            }
+
+            // Iron Man - 10 games
+            if (player.gamesPlayed >= 10 && !player.achievements.includes('iron_man')) {
+                player.achievements.push('iron_man');
+                totalXpGained += ACHIEVEMENTS.IRON_MAN.xp;
+                newAchievements.push(ACHIEVEMENTS.IRON_MAN);
+            }
+
+            // Veteran - 20 games
+            if (player.gamesPlayed >= 20 && !player.achievements.includes('veteran')) {
+                player.achievements.push('veteran');
+                totalXpGained += ACHIEVEMENTS.VETERAN.xp;
+                newAchievements.push(ACHIEVEMENTS.VETERAN);
+            }
+
+            // Century Club - 40 games
+            if (player.gamesPlayed >= 40 && !player.achievements.includes('century')) {
+                player.achievements.push('century');
+                totalXpGained += ACHIEVEMENTS.CENTURY.xp;
+                newAchievements.push(ACHIEVEMENTS.CENTURY);
+            }
+            
+            // Star Player - 5 POTM awards
+            if (player.potmAwards >= 5 && !player.achievements.includes('star_player')) {
+                player.achievements.push('star_player');
+                totalXpGained += ACHIEVEMENTS.STAR_PLAYER.xp;
+                newAchievements.push(ACHIEVEMENTS.STAR_PLAYER);
+            }
+            
+            // MVP - 10 POTM awards
+            if (player.potmAwards >= 10 && !player.achievements.includes('mvp')) {
+                player.achievements.push('mvp');
+                totalXpGained += ACHIEVEMENTS.MVP.xp;
+                newAchievements.push(ACHIEVEMENTS.MVP);
+            }
+
+            // Check milestones
+            MILESTONES.forEach(milestone => {
+                const key = milestone.goals ? 'goals' : milestone.assists ? 'assists' : 'games';
+                const value = milestone.goals || milestone.assists || milestone.games;
+                const milestoneId = `${key}_${value}`;
+                
+                if (player[key] >= value && !player.milestonesReached.includes(milestoneId)) {
+                    player.milestonesReached.push(milestoneId);
+                    totalXpGained += milestone.xp;
+                    newMilestones.push(milestone);
+                }
+            });
+
+            // Update XP and level
+            const oldLevel = calculateLevel(player.xp);
+            player.xp += totalXpGained;
+            const newLevel = calculateLevel(player.xp);
+
+            // Show notifications
+            if (newAchievements.length > 0 || newMilestones.length > 0 || newLevel > oldLevel) {
+                setTimeout(() => {
+                    showGamificationNotification(player, newAchievements, newMilestones, oldLevel, newLevel, totalXpGained);
+                }, 500);
+            }
+        }
+
+        function showGamificationNotification(player, achievements, milestones, oldLevel, newLevel, xpGained) {
+            let message = `<div class="space-y-3">`;
+            
+            if (xpGained > 0) {
+                message += `<div class="text-center text-lg font-bold text-blue-600 dark:text-blue-400">+${xpGained} XP</div>`;
+            }
+
+            if (newLevel > oldLevel) {
+                message += `<div class="text-center text-xl font-black text-yellow-500">
+                    🎉 LEVEL UP! 🎉<br>
+                    <span class="text-2xl">Level ${newLevel}</span>
+                </div>`;
+            }
+
+            achievements.forEach(achievement => {
+                message += `<div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-lg">
+                    <div class="text-2xl mb-2">${achievement.icon}</div>
+                    <div class="font-bold">${achievement.name}</div>
+                    <div class="text-sm opacity-90">${achievement.description}</div>
+                </div>`;
+            });
+
+            milestones.forEach(milestone => {
+                message += `<div class="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-4 rounded-lg">
+                    <div class="font-bold">${milestone.message}</div>
+                </div>`;
+            });
+
+            message += `</div>`;
+
+            // Create notification modal
+            const notification = document.createElement('div');
+            notification.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in';
+            notification.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md mx-4 p-6 animate-bounce-in">
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 text-center">
+                        ${player.name}
+                    </h3>
+                    ${message}
+                    <button onclick="this.closest('.fixed').remove()" class="mt-6 w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition">
+                        Awesome! 🎊
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(notification);
         }
 
         function getWinPercentage(player) {
@@ -2270,6 +3371,48 @@
                             </div>
                         ` : ''}
                     </div>
+
+                    <!-- Level & XP Section -->
+                    <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-6 text-white">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <div class="text-sm opacity-90">Level</div>
+                                <div class="text-4xl font-black">${calculateLevel(player.xp || 0)}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm opacity-90">Total XP</div>
+                                <div class="text-2xl font-bold">${player.xp || 0}</div>
+                            </div>
+                        </div>
+                        <div class="bg-white/20 rounded-full h-4 overflow-hidden">
+                            <div class="bg-white h-full rounded-full transition-all duration-500" style="width: ${getXpForNextLevel(player.xp || 0).percentage}%"></div>
+                        </div>
+                        <div class="text-xs opacity-90 mt-2 text-center">
+                            ${getXpForNextLevel(player.xp || 0).current} / ${getXpForNextLevel(player.xp || 0).needed} XP to Level ${calculateLevel(player.xp || 0) + 1}
+                        </div>
+                    </div>
+
+                    <!-- Achievements Section -->
+                    ${player.achievements && player.achievements.length > 0 ? `
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                        <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>🏆</span> Achievements (${player.achievements.length})
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            ${player.achievements.map(achId => {
+                                const achievement = Object.values(ACHIEVEMENTS).find(a => a.id === achId);
+                                return achievement ? `
+                                    <div class="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg p-4 text-center shadow-lg transform hover:scale-105 transition-transform">
+                                        <div class="text-3xl mb-2">${achievement.icon}</div>
+                                        <div class="font-bold text-white text-sm">${achievement.name}</div>
+                                        <div class="text-xs text-white/80 mt-1">${achievement.description}</div>
+                                        <div class="text-xs text-white/90 font-semibold mt-2">+${achievement.xp} XP</div>
+                                    </div>
+                                ` : '';
+                            }).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
 
                     <!-- Player Info -->
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
@@ -2986,6 +4129,10 @@
             initializeTheme();
             loadFromLocalStorage();
             initializeDefaultUsers();
+            
+            // Recalculate XP for all existing players
+            recalculateAllPlayerXP();
+            
             updateUIForUser();
             updateDisplay();
             
@@ -3030,15 +4177,10 @@
                         });
                         
                         if (!userFound) {
-                            // Create user document if it doesn't exist
-                            await window.firebase.addDoc(
-                                window.firebase.collection(window.firebase.db, 'users'),
-                                {
-                                    email: user.email,
-                                    isAdmin: false,
-                                    createdAt: window.firebase.serverTimestamp()
-                                }
-                            );
+                            // User not found in database - sign them out
+                            await window.firebase.signOut(window.firebase.auth);
+                            alert('❌ Unauthorized account detected.\n\nThis account is not registered in the system. Please use the Sign Up button with an authorized email.');
+                            return;
                         }
                         
                         // Check if user has a linked player profile
