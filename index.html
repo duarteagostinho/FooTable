@@ -43,48 +43,26 @@
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         
-        // Initialize Firebase (you'll need to replace with your config)
         const firebaseConfig = {
-            // You'll add your Firebase config here
-            apiKey: "your-api-key",
-            authDomain: "your-project.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "your-app-id"
+            apiKey: "AIzaSyDEJfOfMcYQZ54BnwwK_Kk_1T0jBKCKoo0",
+            authDomain: "footable-2025.firebaseapp.com",
+            projectId: "footable-2025",
+            storageBucket: "footable-2025.firebasestorage.app",
+            messagingSenderId: "760639912370",
+            appId: "1:760639912370:web:0e40d42298eaf1ce21ccab"
         };
 
-        // Only initialize if config is real (not placeholder)
-        if (firebaseConfig.apiKey !== "your-api-key") {
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
-            // Make Firebase available globally
-            window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged };
-        } else {
-            console.log('Firebase config contains placeholder values - Firebase not initialized');
-        }
+        window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged };
+        window.firebaseInitialized = true;
     </script>
 </head>
 
 <body class="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
-    <!-- Firebase Status Banner -->
-    <div id="firebaseStatus" class="hidden bg-yellow-100 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-4 text-sm">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                </svg>
-            </div>
-            <div class="ml-3">
-                <p class="text-yellow-700 dark:text-yellow-300">
-                    <strong>Firebase Setup Required:</strong> Please configure your Firebase credentials to enable data persistence and sync across devices.
-                    <button onclick="showFirebaseSetup()" class="underline ml-2">Setup Now</button>
-                </p>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Navigation -->
     <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 backdrop-blur-sm bg-white/80 dark:bg-gray-900/80">
@@ -268,56 +246,7 @@
         </div>
     </div>
 
-    <!-- Firebase Setup Modal -->
-    <div id="firebaseSetupModal" class="fixed inset-0 bg-black/60 backdrop-blur-md hidden items-center justify-center z-50 animate-fade-in">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
-            <div class="p-8">
-                <div class="flex items-center gap-4 mb-8">
-                    <div class="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 shadow-lg">
-                        <span class="text-white text-2xl">🔥</span>
-                    </div>
-                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white">Firebase Setup</h3>
-                </div>
-                
-                <div class="space-y-6">
-                    <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl">
-                        <h4 class="font-bold text-lg mb-4 text-gray-900 dark:text-white">Why Firebase?</h4>
-                        <ul class="space-y-2 text-gray-700 dark:text-gray-300">
-                            <li>✅ Real-time data sync across all devices</li>
-                            <li>✅ Automatic backup and data persistence</li>
-                            <li>✅ Share data with friends instantly</li>
-                            <li>✅ No more data loss from browser clearing</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-xl">
-                        <h4 class="font-bold text-lg mb-4 text-gray-900 dark:text-white">Setup Steps:</h4>
-                        <ol class="space-y-3 text-gray-700 dark:text-gray-300">
-                            <li><strong>1.</strong> Go to <a href="https://console.firebase.google.com" target="_blank" class="text-blue-600 underline">Firebase Console</a></li>
-                            <li><strong>2.</strong> Create a new project called "FooTable"</li>
-                            <li><strong>3.</strong> Add a web app and copy the config</li>
-                            <li><strong>4.</strong> Enable Firestore Database</li>
-                            <li><strong>5.</strong> Paste your config below</li>
-                        </ol>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Firebase Configuration (JSON):</label>
-                        <textarea id="firebaseConfig" rows="8" placeholder="Paste your Firebase config here..." class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 font-mono text-sm"></textarea>
-                    </div>
-                </div>
-                
-                <div class="flex gap-4 mt-10 justify-end">
-                    <button onclick="hideFirebaseSetup()" class="px-8 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105">
-                        Skip for Now
-                    </button>
-                    <button onclick="setupFirebase()" class="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                        🔥 Setup Firebase
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Include all other modals from original file... -->
     <!-- (Login, Add Game, Add Player, Players Management, Player Profile modals) -->
@@ -866,55 +795,7 @@
             }
         }
 
-        function showFirebaseSetup() {
-            document.getElementById('firebaseSetupModal').classList.remove('hidden');
-            document.getElementById('firebaseSetupModal').classList.add('flex');
-        }
 
-        function hideFirebaseSetup() {
-            document.getElementById('firebaseSetupModal').classList.add('hidden');
-            document.getElementById('firebaseSetupModal').classList.remove('flex');
-            document.getElementById('firebaseStatus').classList.remove('hidden');
-        }
-
-        async function setupFirebase() {
-            const configText = document.getElementById('firebaseConfig').value.trim();
-            
-            if (!configText) {
-                alert('Please enter your Firebase configuration');
-                return;
-            }
-
-            try {
-                console.log('Parsing Firebase config...');
-                const config = JSON.parse(configText);
-                
-                // Validate required fields
-                const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
-                const missingFields = requiredFields.filter(field => !config[field] || config[field] === `your-${field}` || config[field] === 'your-api-key');
-                
-                if (missingFields.length > 0) {
-                    alert(`Missing or invalid Firebase configuration fields: ${missingFields.join(', ')}\n\nPlease make sure you copied the complete configuration from Firebase Console.`);
-                    return;
-                }
-                
-                console.log('Config validation passed, attempting Firebase initialization...');
-                const success = await FirebaseService.initializeFirebase(config);
-                
-                if (success) {
-                    localStorage.setItem('footable-firebase-config', configText);
-                    setupAuthListener();
-                    hideFirebaseSetup();
-                    document.getElementById('firebaseStatus').classList.add('hidden');
-                    alert('Firebase connected successfully! 🎉\n\nYou can now login securely and your data will sync across devices.');
-                } else {
-                    alert('Firebase setup failed. Common issues:\n\n1. Check your internet connection\n2. Verify your Firebase project settings\n3. Make sure Firestore AND Authentication are enabled\n4. Check browser console for detailed errors');
-                }
-            } catch (parseError) {
-                console.error('JSON parsing error:', parseError);
-                alert('Invalid Firebase configuration format. Please check:\n\n1. Make sure you copied the complete JSON object\n2. Remove any JavaScript code (const firebaseConfig = etc.)\n3. Use proper JSON format with quotes around all keys');
-            }
-        }
 
         function saveToLocalStorage() {
             localStorage.setItem('footable-games', JSON.stringify(games));
@@ -2712,26 +2593,7 @@
             updateConnectionStatus(false);
 
             // Try to auto-initialize Firebase if config exists
-            const savedConfig = localStorage.getItem('footable-firebase-config');
-            if (savedConfig) {
-                console.log('Found saved Firebase config, attempting to connect...');
-                try {
-                    const config = JSON.parse(savedConfig);
-                    const success = await FirebaseService.initializeFirebase(config);
-                    if (!success) {
-                        console.log('Firebase connection failed - showing setup banner');
-                        document.getElementById('firebaseStatus').classList.remove('hidden');
-                    } else {
-                        setupAuthListener();
-                    }
-                } catch (error) {
-                    console.error('Auto-initialization failed:', error);
-                    document.getElementById('firebaseStatus').classList.remove('hidden');
-                }
-            } else {
-                console.log('No saved Firebase config found - showing setup banner');
-                document.getElementById('firebaseStatus').classList.remove('hidden');
-            }
+            setupAuthListener();
             
             console.log('App initialization complete. firebaseInitialized =', firebaseInitialized);
         }
@@ -2777,12 +2639,6 @@
         // Initialize event listeners
         function initializeEventListeners() {
             // Close modals when clicking outside
-            document.getElementById('firebaseSetupModal').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    hideFirebaseSetup();
-                }
-            });
-
             document.getElementById('loginModal').addEventListener('click', function(e) {
                 if (e.target === this) {
                     hideLogin();
