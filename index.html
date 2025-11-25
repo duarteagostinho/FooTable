@@ -58,6 +58,17 @@
 
         window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged };
         window.firebaseInitialized = true;
+        
+        console.log('Firebase initialized successfully');
+        
+        // Update connection status once DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                updateConnectionStatus(true);
+            });
+        } else {
+            updateConnectionStatus(true);
+        }
     </script>
 </head>
 
@@ -2589,10 +2600,10 @@
             updateUIForUser();
             updateDisplay();
             
-            // Start with offline status
-            updateConnectionStatus(false);
+            // Set connection status based on Firebase initialization
+            updateConnectionStatus(firebaseInitialized);
 
-            // Try to auto-initialize Firebase if config exists
+            // Setup auth listener if Firebase is initialized
             setupAuthListener();
             
             console.log('App initialization complete. firebaseInitialized =', firebaseInitialized);
