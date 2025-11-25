@@ -106,12 +106,13 @@
                         <span id="themeIcon">🌙</span>
                     </button>
                     
-                    <!-- Debug Button (temporary) -->
-                    <button onclick="resetAllData()" class="p-2 rounded-lg bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 transition-colors text-xs" title="Reset All Data (Debug)">
-                        🔄
+                    <div id="userInfo" class="text-sm md:text-base text-gray-700 dark:text-gray-300"></div>
+                    
+                    <!-- Player Login Button -->
+                    <button id="playerLoginBtn" onclick="showPlayerLogin()" class="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-3 md:px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-xs md:text-sm">
+                        👤 Player
                     </button>
                     
-                    <div id="userInfo" class="text-sm md:text-base text-gray-700 dark:text-gray-300"></div>
                     <button id="loginBtn" onclick="showLogin()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 md:px-6 py-2.5 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm md:text-base">
                         Login
                     </button>
@@ -134,22 +135,78 @@
             </p>
         </div>
 
-        <!-- Add Game Button -->
+        <!-- Global Search Bar -->
+        <div class="max-w-4xl mx-auto mb-12 lg:mb-16 animate-fade-in">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-xl hover:shadow-2xl transition-all duration-300">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <!-- Search Input -->
+                    <div class="flex-1 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text" id="globalSearchInput" placeholder="Search players, games, or locations..." class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base">
+                    </div>
+                    
+                    <!-- Filter Dropdown -->
+                    <div class="sm:w-48">
+                        <select id="searchFilter" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base" onchange="performSearch()">
+                            <option value="all">🔍 Search All</option>
+                            <option value="players">👥 Players Only</option>
+                            <option value="games">⚽ Games Only</option>
+                            <option value="locations">📍 Locations Only</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Search Button -->
+                    <button onclick="performSearch()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl whitespace-nowrap">
+                        🔍 Search
+                    </button>
+                </div>
+                
+                <!-- Search Results -->
+                <div id="searchResults" class="hidden mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Search Results:</h4>
+                    <div id="searchResultsContent" class="space-y-4">
+                        <!-- Results will be populated here -->
+                    </div>
+                    <button onclick="clearSearch()" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                        ✕ Clear Results
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Controls -->
         <div class="text-center mb-12 lg:mb-16 animate-slide-in">
-            <div class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 lg:gap-8">
+            <div id="adminControls" class="hidden flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 lg:gap-8">
                 <button onclick="showAddGameModal()" class="group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 md:px-10 lg:px-12 py-4 md:py-5 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl">
                     <span class="flex items-center justify-center gap-3">
                         ⚽ Add New Game
                     </span>
                 </button>
                 
-                <div id="adminControls" class="hidden flex flex-col sm:flex-row gap-4 sm:gap-6">
-                    <button onclick="showAddPlayerModal()" class="group bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-8 md:px-10 lg:px-12 py-4 md:py-5 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl">
-                        👤 Add Player
+                <button onclick="showPlayersModal()" class="group bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-8 md:px-10 lg:px-12 py-4 md:py-5 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl">
+                    👥 Manage Players
+                </button>
+            </div>
+            
+            <!-- Non-admin message -->
+            <div id="nonAdminMessage" class="hidden">
+                <p class="text-gray-600 dark:text-gray-400 text-lg font-medium mb-4">
+                    Please login as an administrator to add games and manage players.
+                </p>
+                <p class="text-gray-500 dark:text-gray-500 text-sm mb-4">
+                    Players can login with their name to edit their profiles and upload pictures! 📸
+                </p>
+                <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                    <button onclick="showLogin()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        🔓 Login as Admin
                     </button>
-                    
-                    <button onclick="showPlayersModal()" class="group bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-8 md:px-10 lg:px-12 py-4 md:py-5 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl">
-                        👥 Manage Players
+                    <span class="text-gray-400 dark:text-gray-500">or</span>
+                    <button onclick="showPlayerLogin()" class="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        👤 Player Login
                     </button>
                 </div>
             </div>
@@ -306,81 +363,99 @@
 
     <!-- Add Game Modal -->
     <div id="gameModal" class="fixed inset-0 bg-black/60 backdrop-blur-md hidden items-center justify-center z-50 animate-fade-in">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
-            <div class="p-8">
-                <div class="flex items-center gap-4 mb-8">
-                    <div class="p-3 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
-                        <span class="text-white text-2xl">⚽</span>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
+                        <span class="text-white text-xl">⚽</span>
                     </div>
-                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white">Add New Game</h3>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Add New Game</h3>
                 </div>
                 
-                <form id="gameForm" class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">📅 Date:</label>
-                        <input type="date" id="gameDate" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">👥 Team 1 Players (comma separated):</label>
-                        <input type="text" id="team1Players" placeholder="John, Mike, Alex" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">👥 Team 2 Players (comma separated):</label>
-                        <input type="text" id="team2Players" placeholder="Sarah, Tom, Lisa" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-6">
+                <form id="gameForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">🥅 Team 1 Score:</label>
-                            <input type="number" id="score1" min="0" value="0" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">📅 Date:</label>
+                            <input type="date" id="gameDate" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">🥅 Team 2 Score:</label>
-                            <input type="number" id="score2" min="0" value="0" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">� Location:</label>
+                            <input type="text" id="location" placeholder="Local park" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm">
                         </div>
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">📍 Location (optional):</label>
-                        <input type="text" id="location" placeholder="Local park" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                    <!-- Team Selection -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">👥 Team 1 Players:</label>
+                            <div class="space-y-2">
+                                <select id="team1PlayerSelect" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                                    <option value="">Select a player to add...</option>
+                                </select>
+                                <div id="team1SelectedPlayers" class="flex flex-wrap gap-2 min-h-[2rem] p-2 border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700">
+                                    <span class="text-sm text-gray-500 dark:text-gray-400" id="team1Placeholder">No players selected</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">👥 Team 2 Players:</label>
+                            <div class="space-y-2">
+                                <select id="team2PlayerSelect" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                                    <option value="">Select a player to add...</option>
+                                </select>
+                                <div id="team2SelectedPlayers" class="flex flex-wrap gap-2 min-h-[2rem] p-2 border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700">
+                                    <span class="text-sm text-gray-500 dark:text-gray-400" id="team2Placeholder">No players selected</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">🥅 Team 1 Score:</label>
+                            <input type="number" id="score1" min="0" value="0" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" onchange="updateGoalInputs()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">🥅 Team 2 Score:</label>
+                            <input type="number" id="score2" min="0" value="0" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" onchange="updateGoalInputs()">
+                        </div>
                     </div>
 
-                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-8">
-                        <h4 class="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
-                            ⚽ Goals & Assists (optional)
+                    <!-- Goals and Assists Tracking -->
+                    <div id="goalTrackingSection" class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 hidden">
+                        <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                            ⚽ Player Stats for this Match
                         </h4>
                         
-                        <div class="grid grid-cols-2 gap-6">
+                        <div class="space-y-6">
+                            <!-- Team 1 Stats -->
                             <div>
-                                <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Team 1 Goals (comma separated):</label>
-                                <input type="text" id="team1Goals" placeholder="John, Mike" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                                <h5 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                    🔵 Team 1 Player Stats:
+                                </h5>
+                                <div id="team1PlayerStats" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Team 1 player stats will be generated here -->
+                                </div>
                             </div>
+                            
+                            <!-- Team 2 Stats -->
                             <div>
-                                <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Team 2 Goals (comma separated):</label>
-                                <input type="text" id="team2Goals" placeholder="Sarah, Tom" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-6 mt-4">
-                            <div>
-                                <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Team 1 Assists (comma separated):</label>
-                                <input type="text" id="team1Assists" placeholder="Alex, John" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Team 2 Assists (comma separated):</label>
-                                <input type="text" id="team2Assists" placeholder="Lisa, Sarah" class="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                                <h5 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                    🔴 Team 2 Player Stats:
+                                </h5>
+                                <div id="team2PlayerStats" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Team 2 player stats will be generated here -->
+                                </div>
                             </div>
                         </div>
                     </div>
                 </form>
                 
-                <div class="flex gap-4 mt-10 justify-end">
-                    <button onclick="hideAddGameModal()" class="px-8 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105">
+                <div class="flex gap-3 mt-6 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button onclick="hideAddGameModal()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 text-sm">
                         Cancel
                     </button>
-                    <button onclick="addGame()" class="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                    <button onclick="addGame()" class="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm">
                         🎯 Add Game
                     </button>
                 </div>
@@ -389,7 +464,7 @@
     </div>
 
     <!-- Add Player Modal -->
-    <div id="playerModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+    <div id="playerModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[60] animate-fade-in">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
             <div class="p-8">
                 <div class="flex items-center gap-3 mb-8">
@@ -420,6 +495,18 @@
                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🎂 Age (optional):</label>
                         <input type="number" id="playerAge" placeholder="Enter age" min="16" max="50" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
+                    
+                    <!-- Goals and Assists (only visible during edit) -->
+                    <div id="playerStatsFields" class="hidden grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">⚽ Goals:</label>
+                            <input type="number" id="playerGoals" placeholder="0" min="0" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🅰️ Assists:</label>
+                            <input type="number" id="playerAssists" placeholder="0" min="0" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                    </div>
                 </form>
                 
                 <div class="flex gap-4 mt-8 justify-end">
@@ -436,22 +523,22 @@
 
     <!-- Players Management Modal -->
     <div id="playersModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden animate-bounce-in border border-gray-200 dark:border-gray-700">
-            <div class="p-8">
-                <div class="flex items-center justify-between mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center gap-3">
                         <div class="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
                             <span class="text-white text-xl">👥</span>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Player Management</h3>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Player Management</h3>
                     </div>
                     <button onclick="hidePlayersModal()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold">×</button>
                 </div>
                 
                 <div class="mb-6">
-                    <div class="flex gap-4 mb-4">
-                        <input type="text" id="playerSearch" placeholder="Search players..." class="flex-1 p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        <select id="positionFilter" class="p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <div class="flex gap-3 mb-4">
+                        <input type="text" id="playerSearch" placeholder="Search players..." class="flex-1 p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                        <select id="positionFilter" class="p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
                             <option value="">All Positions</option>
                             <option value="Goalkeeper">Goalkeeper</option>
                             <option value="Defender">Defender</option>
@@ -459,18 +546,80 @@
                             <option value="Forward">Forward</option>
                             <option value="Universal">Universal</option>
                         </select>
+                        <button onclick="showAddPlayerModal()" class="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl whitespace-nowrap text-sm">
+                            👤 Add Player
+                        </button>
                     </div>
                 </div>
                 
-                <div class="max-h-96 overflow-y-auto">
-                    <div id="playersTable" class="grid gap-4">
+                <div class="max-h-[50vh] overflow-y-auto">
+                    <div id="playersTable" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <!-- Players will be populated here -->
                     </div>
                 </div>
                 
                 <div class="flex justify-end mt-6">
-                    <button onclick="hidePlayersModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                    <button onclick="hidePlayersModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
                         Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Profile Modal -->
+    <div id="playerProfileModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600">
+                            <span class="text-white text-xl">👤</span>
+                        </div>
+                        <h3 id="profileModalTitle" class="text-2xl font-bold text-gray-900 dark:text-white">Player Profile</h3>
+                    </div>
+                    <button onclick="hidePlayerProfile()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold">×</button>
+                </div>
+                
+                <div id="playerProfileContent">
+                    <!-- Profile content will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Login Modal -->
+    <div id="playerLoginModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[60] animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="p-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600">
+                        <span class="text-white text-xl">🔑</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Player Login</h3>
+                </div>
+                
+                <form id="playerLoginForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Player Name:</label>
+                        <select id="playerLoginSelect" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="">Select your name...</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Password (optional):</label>
+                        <input type="password" id="playerPassword" placeholder="Enter password (if set)" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty if you haven't set a password yet</p>
+                    </div>
+                </form>
+                
+                <div class="flex gap-4 mt-8 justify-end">
+                    <button onclick="hidePlayerLogin()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                        Cancel
+                    </button>
+                    <button onclick="loginAsPlayer()" class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        🔓 Login
                     </button>
                 </div>
             </div>
@@ -631,6 +780,49 @@
                     saveToLocalStorage();
                 }
             }
+
+            static async updatePlayer(playerData) {
+                if (!firebaseInitialized) {
+                    // When Firebase is not initialized, just save to localStorage
+                    saveToLocalStorage();
+                    return;
+                }
+
+                try {
+                    // Find the Firebase document ID for this player
+                    const playersQuery = window.firebase.query(
+                        window.firebase.collection(window.firebase.db, 'players')
+                    );
+                    const snapshot = await window.firebase.getDocs(playersQuery);
+                    
+                    let docId = null;
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        if (data.name === playerData.name || (data.id && data.id == playerData.id)) {
+                            docId = doc.id;
+                        }
+                    });
+
+                    if (docId) {
+                        await window.firebase.updateDoc(
+                            window.firebase.doc(window.firebase.db, 'players', docId),
+                            { 
+                                ...playerData, 
+                                lastUpdatedAt: window.firebase.serverTimestamp(),
+                                lastUpdatedBy: playerData.lastUpdatedBy || 'unknown'
+                            }
+                        );
+                        console.log('Player updated in Firebase successfully');
+                    } else {
+                        console.warn('Player not found in Firebase, saving locally only');
+                        saveToLocalStorage();
+                    }
+                } catch (error) {
+                    console.error('Error updating player in Firebase:', error);
+                    // Fallback to localStorage
+                    saveToLocalStorage();
+                }
+            }
         }
 
         // Theme management
@@ -749,36 +941,11 @@
             }
         }
 
-        // Add sample players for testing
+        // Add sample players for testing (only when no players exist)
         function initializeSamplePlayers() {
-            console.log('initializeSamplePlayers called, current players length:', players.length);
-            
-            if (players.length === 0) {
-                console.log('No players found, adding sample players...');
-                const samplePlayers = [
-                    { name: 'John Smith', position: 'Forward', age: 25, gamesPlayed: 8, wins: 5, draws: 2, losses: 1, goals: 12, assists: 3 },
-                    { name: 'Mike Johnson', position: 'Defender', age: 28, gamesPlayed: 7, wins: 4, draws: 1, losses: 2, goals: 2, assists: 5 },
-                    { name: 'Dave Wilson', position: 'Winger', age: 23, gamesPlayed: 6, wins: 4, draws: 0, losses: 2, goals: 8, assists: 4 },
-                    { name: 'Tom Brown', position: 'Goalkeeper', age: 30, gamesPlayed: 5, wins: 3, draws: 1, losses: 1, goals: 0, assists: 0 }
-                ];
-
-                samplePlayers.forEach((player, index) => {
-                    const newPlayer = {
-                        id: 'sample-' + Date.now() + '-' + index,
-                        ...player,
-                        createdAt: new Date().toISOString(),
-                        createdBy: 'system'
-                    };
-                    players.push(newPlayer);
-                    console.log('Added sample player:', newPlayer.name);
-                });
-                
-                console.log('Sample players added, new array length:', players.length);
-                saveToLocalStorage();
-                console.log('Sample players saved to localStorage');
-            } else {
-                console.log('Players already exist, skipping sample data creation');
-            }
+            // Sample players functionality disabled - only real players will be shown
+            // This ensures a clean start with only database players or manually added ones
+            console.log('Sample players initialization skipped');
         }
 
         function updateDisplay() {
@@ -844,15 +1011,29 @@
                     <div class="flex justify-between items-center py-5 px-5 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-lg transition-all duration-300 group">
                         <div class="flex items-center gap-4">
                             <div class="relative">
-                                <div class="w-12 h-12 rounded-full ${
-                                    index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg' :
-                                    index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500 shadow-lg' :
-                                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-yellow-700 shadow-lg' :
-                                    'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg'
-                                } flex items-center justify-center text-white font-bold text-lg transition-transform duration-300 group-hover:scale-110">
+                                <div class="w-12 h-12 rounded-full overflow-hidden border-2 ${
+                                    index === 0 ? 'border-yellow-400' : index === 1 ? 'border-gray-400' : index === 2 ? 'border-amber-600' : 'border-gray-300'
+                                } shadow-lg transition-transform duration-300 group-hover:scale-110">
+                                    ${player.profilePicture 
+                                        ? `<img src="${player.profilePicture}" alt="${player.name}" class="w-full h-full object-cover">`
+                                        : `<div class="w-full h-full bg-gradient-to-br ${
+                                            index === 0 ? 'from-yellow-400 to-orange-500' :
+                                            index === 1 ? 'from-gray-300 to-gray-500' :
+                                            index === 2 ? 'from-amber-600 to-yellow-700' :
+                                            'from-blue-500 to-indigo-600'
+                                        } flex items-center justify-center text-white font-bold text-lg">
+                                            ${player.profilePicture ? '' : player.name.charAt(0).toUpperCase()}
+                                        </div>`
+                                    }
+                                </div>
+                                <div class="absolute -top-1 -right-1 w-6 h-6 rounded-full ${
+                                    index === 0 ? 'bg-yellow-400 text-yellow-900' : 
+                                    index === 1 ? 'bg-gray-400 text-gray-900' : 
+                                    index === 2 ? 'bg-amber-600 text-amber-900' : 
+                                    'bg-blue-500 text-white'
+                                } flex items-center justify-center text-xs font-bold shadow-lg">
                                     ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                                 </div>
-                                ${index < 3 ? '<div class="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full animate-pulse"></div>' : ''}
                             </div>
                             <div>
                                 <div class="font-bold text-lg text-gray-900 dark:text-white">${player.name}</div>
@@ -867,15 +1048,25 @@
                             </div>
                         </div>
                         <div class="text-right">
-                            <div class="font-black text-2xl ${getWinPercentage(player) >= 70 ? 'text-green-600 dark:text-green-400' : getWinPercentage(player) >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}">
-                                ${getWinPercentage(player)}%
+                            <div class="flex items-center gap-3">
+                                <div>
+                                    <div class="font-black text-2xl ${getWinPercentage(player) >= 70 ? 'text-green-600 dark:text-green-400' : getWinPercentage(player) >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}">
+                                        ${getWinPercentage(player)}%
+                                    </div>
+                                    <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                        <span class="text-green-600 dark:text-green-400">${player.wins || 0}W</span>
+                                        <span class="text-yellow-600 dark:text-yellow-400">${player.draws || 0}D</span>
+                                        <span class="text-red-500 dark:text-red-400">${player.losses || 0}L</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">${player.gamesPlayed || 0} game${(player.gamesPlayed || 0) !== 1 ? 's' : ''}</div>
+                                </div>
+                                <button onclick="showPlayerProfile('${player.name}')" class="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200" title="View Profile">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
                             </div>
-                            <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                <span class="text-green-600 dark:text-green-400">${player.wins}W</span>
-                                <span class="text-yellow-600 dark:text-yellow-400">${player.draws}D</span>
-                                <span class="text-red-500 dark:text-red-400">${player.losses}L</span>
-                            </div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">${player.gamesPlayed} game${player.gamesPlayed !== 1 ? 's' : ''}</div>
                         </div>
                     </div>
                 `).join('');
@@ -890,6 +1081,198 @@
                 ? (games.reduce((sum, game) => sum + game.score1 + game.score2, 0) / games.length).toFixed(1)
                 : '0';
             document.getElementById('avgGoals').textContent = avgGoals;
+        }
+
+        // Global Search Functions
+        function performSearch() {
+            const searchTerm = document.getElementById('globalSearchInput').value.trim().toLowerCase();
+            const filter = document.getElementById('searchFilter').value;
+            const resultsContainer = document.getElementById('searchResults');
+            const resultsContent = document.getElementById('searchResultsContent');
+
+            if (!searchTerm) {
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+
+            let results = [];
+
+            // Search Players
+            if (filter === 'all' || filter === 'players') {
+                const playerResults = players.filter(player => 
+                    player.name.toLowerCase().includes(searchTerm) ||
+                    (player.position && player.position.toLowerCase().includes(searchTerm)) ||
+                    (player.age && player.age.toString().includes(searchTerm))
+                ).map(player => ({
+                    type: 'player',
+                    data: player,
+                    title: player.name,
+                    subtitle: `${player.position || 'Unknown Position'} ${player.age ? '• ' + player.age + 'y' : ''}`,
+                    extra: `⚽ ${player.goals || 0} goals • 🅰️ ${player.assists || 0} assists • ${getWinPercentage(player)}% win rate`
+                }));
+                results = results.concat(playerResults);
+            }
+
+            // Search Games
+            if (filter === 'all' || filter === 'games') {
+                const gameResults = games.filter(game => 
+                    (game.location && game.location.toLowerCase().includes(searchTerm)) ||
+                    (game.date && game.date.includes(searchTerm)) ||
+                    (game.team1 && game.team1.some(p => p.toLowerCase().includes(searchTerm))) ||
+                    (game.team2 && game.team2.some(p => p.toLowerCase().includes(searchTerm)))
+                ).map(game => ({
+                    type: 'game',
+                    data: game,
+                    title: `Game on ${formatDate(game.date)}`,
+                    subtitle: `${game.location || 'Unknown Location'} • Score: ${game.score1}-${game.score2}`,
+                    extra: `Team 1: ${game.team1?.join(', ') || 'N/A'} vs Team 2: ${game.team2?.join(', ') || 'N/A'}`
+                }));
+                results = results.concat(gameResults);
+            }
+
+            // Search Locations
+            if (filter === 'all' || filter === 'locations') {
+                const locationResults = [...new Set(games.map(game => game.location).filter(location => 
+                    location && location.toLowerCase().includes(searchTerm)
+                ))].map(location => {
+                    const gamesAtLocation = games.filter(game => game.location === location);
+                    return {
+                        type: 'location',
+                        data: { location, games: gamesAtLocation },
+                        title: `📍 ${location}`,
+                        subtitle: `${gamesAtLocation.length} game${gamesAtLocation.length !== 1 ? 's' : ''} played here`,
+                        extra: `Total goals: ${gamesAtLocation.reduce((sum, game) => sum + game.score1 + game.score2, 0)}`
+                    };
+                });
+                results = results.concat(locationResults);
+            }
+
+            // Display results
+            displaySearchResults(results, searchTerm);
+        }
+
+        function displaySearchResults(results, searchTerm) {
+            const resultsContainer = document.getElementById('searchResults');
+            const resultsContent = document.getElementById('searchResultsContent');
+
+            if (results.length === 0) {
+                resultsContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-gray-400 text-4xl mb-4">🔍</div>
+                        <p class="text-gray-600 dark:text-gray-400">No results found for "${searchTerm}"</p>
+                        <p class="text-gray-500 dark:text-gray-500 text-sm mt-2">Try different keywords or adjust your filter</p>
+                    </div>
+                `;
+            } else {
+                resultsContent.innerHTML = `
+                    <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                        Found ${results.length} result${results.length !== 1 ? 's' : ''} for "${searchTerm}"
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${results.map(result => `
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300 hover:shadow-lg cursor-pointer"
+                                 onclick="${getResultClickHandler(result)}">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold ${getResultIcon(result.type)}">
+                                        ${result.type === 'player' ? '👤' : result.type === 'game' ? '⚽' : '📍'}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-bold text-gray-900 dark:text-white truncate">${result.title}</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${result.subtitle}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">${result.extra}</p>
+                                    </div>
+                                    <div class="text-gray-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            resultsContainer.classList.remove('hidden');
+        }
+
+        function getResultIcon(type) {
+            switch (type) {
+                case 'player':
+                    return 'bg-gradient-to-br from-blue-500 to-indigo-600';
+                case 'game':
+                    return 'bg-gradient-to-br from-green-500 to-emerald-600';
+                case 'location':
+                    return 'bg-gradient-to-br from-purple-500 to-pink-600';
+                default:
+                    return 'bg-gradient-to-br from-gray-500 to-gray-600';
+            }
+        }
+
+        function getResultClickHandler(result) {
+            switch (result.type) {
+                case 'player':
+                    return `showPlayerProfile('${result.data.name}')`;
+                case 'game':
+                    return `showGameDetails('${result.data.id || result.data.date}')`;
+                case 'location':
+                    return `showLocationDetails('${result.data.location}')`;
+                default:
+                    return '';
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown Date';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+            } catch {
+                return dateString;
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('globalSearchInput').value = '';
+            document.getElementById('searchFilter').value = 'all';
+            document.getElementById('searchResults').classList.add('hidden');
+        }
+
+        function showGameDetails(gameId) {
+            const game = games.find(g => g.id === gameId || g.date === gameId);
+            if (!game) return;
+
+            alert(`Game Details:\n\nDate: ${formatDate(game.date)}\nLocation: ${game.location || 'Unknown'}\nScore: ${game.score1} - ${game.score2}\n\nTeam 1: ${game.team1?.join(', ') || 'N/A'}\nTeam 2: ${game.team2?.join(', ') || 'N/A'}`);
+        }
+
+        function showLocationDetails(location) {
+            const gamesAtLocation = games.filter(game => game.location === location);
+            const totalGoals = gamesAtLocation.reduce((sum, game) => sum + game.score1 + game.score2, 0);
+            
+            alert(`Location: ${location}\n\nGames played: ${gamesAtLocation.length}\nTotal goals scored: ${totalGoals}\nAverage goals per game: ${gamesAtLocation.length > 0 ? (totalGoals / gamesAtLocation.length).toFixed(1) : 0}`);
+        }
+
+        // Add search on Enter key press
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('globalSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        performSearch();
+                    }
+                });
+            }
+        });
+
+        // Helper function for win percentage (if not already defined)
+        function getWinPercentage(player) {
+            const totalGames = (player.wins || 0) + (player.draws || 0) + (player.losses || 0);
+            if (totalGames === 0) return 0;
+            return Math.round(((player.wins || 0) / totalGames) * 100);
         }
 
         // Placeholder functions for missing features
@@ -926,7 +1309,21 @@
         }
 
         function logout() {
-            currentUser = null;
+            if (currentUser && currentUser.isPlayer) {
+                // Player logout - just remove player-specific data
+                delete currentUser.playerId;
+                delete currentUser.playerName;
+                delete currentUser.isPlayer;
+                
+                // If no admin login either, set to null
+                if (!currentUser.username) {
+                    currentUser = null;
+                }
+            } else {
+                // Admin/regular logout
+                currentUser = null;
+            }
+            
             saveToLocalStorage();
             updateUIForUser();
         }
@@ -934,27 +1331,71 @@
         function updateUIForUser() {
             const userInfo = document.getElementById('userInfo');
             const loginBtn = document.getElementById('loginBtn');
+            const playerLoginBtn = document.getElementById('playerLoginBtn');
             const adminControls = document.getElementById('adminControls');
+            const nonAdminMessage = document.getElementById('nonAdminMessage');
 
             if (currentUser) {
+                const isPlayerLoggedIn = currentUser.isPlayer && currentUser.playerId;
+                let profileImageHTML = '';
+                let clickableClass = '';
+                let clickHandler = '';
+                
+                // Get player's profile picture if logged in as player
+                if (isPlayerLoggedIn) {
+                    const player = players.find(p => p.name === currentUser.playerId);
+                    if (player) {
+                        if (player.profilePicture) {
+                            profileImageHTML = `<img src="${player.profilePicture}" alt="${player.name}" class="w-10 h-10 rounded-full object-cover shadow-lg border-2 border-white dark:border-gray-700">`;
+                        } else {
+                            profileImageHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-lg border-2 border-white dark:border-gray-700">${player.name.charAt(0).toUpperCase()}</div>`;
+                        }
+                        clickableClass = 'cursor-pointer hover:scale-105 transition-transform duration-200';
+                        clickHandler = `onclick="showPlayerProfile('${player.name}')" title="View my profile"`;
+                    } else {
+                        profileImageHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-lg">👤</div>`;
+                    }
+                } else {
+                    // Admin or regular user
+                    profileImageHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">${currentUser.isAdmin ? '👑' : '👤'}</div>`;
+                }
+                
                 userInfo.innerHTML = `
                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">
-                            ${currentUser.isAdmin ? '👑' : '👤'}
+                        <div class="${clickableClass}" ${clickHandler}>
+                            ${profileImageHTML}
                         </div>
                         <div class="flex flex-col">
-                            <span class="font-semibold text-gray-900 dark:text-white">${currentUser.username}</span>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">${currentUser.isAdmin ? 'Administrator' : 'User'}</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">${currentUser.isPlayer ? currentUser.playerName : currentUser.username}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">${currentUser.isAdmin ? 'Administrator' : currentUser.isPlayer ? 'Player' : 'User'}</span>
                         </div>
                         <button onclick="logout()" class="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors">Logout</button>
                     </div>
                 `;
-                loginBtn.classList.add('hidden');
-                adminControls.classList.toggle('hidden', !currentUser.isAdmin);
+                
+                if (currentUser.isPlayer) {
+                    loginBtn.classList.add('hidden');
+                    playerLoginBtn.classList.add('hidden');
+                    adminControls.classList.add('hidden');
+                    nonAdminMessage.classList.add('hidden');
+                } else {
+                    playerLoginBtn.classList.add('hidden');
+                    loginBtn.classList.add('hidden');
+                    
+                    if (currentUser.isAdmin) {
+                        adminControls.classList.remove('hidden');
+                        nonAdminMessage.classList.add('hidden');
+                    } else {
+                        adminControls.classList.add('hidden');
+                        nonAdminMessage.classList.remove('hidden');
+                    }
+                }
             } else {
                 userInfo.innerHTML = '';
                 loginBtn.classList.remove('hidden');
+                playerLoginBtn.classList.remove('hidden');
                 adminControls.classList.add('hidden');
+                nonAdminMessage.classList.remove('hidden');
             }
         }
 
@@ -964,15 +1405,195 @@
                 showLogin();
                 return;
             }
+            
+            if (!currentUser.isAdmin) {
+                alert('Only administrators can add games');
+                return;
+            }
+            
             document.getElementById('gameModal').classList.remove('hidden');
             document.getElementById('gameModal').classList.add('flex');
             document.getElementById('gameDate').value = new Date().toISOString().split('T')[0];
+            
+            // Initialize team selections and player dropdowns
+            initializeGameModal();
+        }
+
+        let selectedTeam1Players = [];
+        let selectedTeam2Players = [];
+
+        function initializeGameModal() {
+            selectedTeam1Players = [];
+            selectedTeam2Players = [];
+            
+            // Populate player dropdowns
+            populatePlayerDropdowns();
+            
+            // Clear team selections
+            updateTeamDisplay('team1');
+            updateTeamDisplay('team2');
+            
+            // Hide goal tracking initially
+            document.getElementById('goalTrackingSection').classList.add('hidden');
+        }
+
+        function populatePlayerDropdowns() {
+            const team1Select = document.getElementById('team1PlayerSelect');
+            const team2Select = document.getElementById('team2PlayerSelect');
+            
+            // Clear existing options except first
+            team1Select.innerHTML = '<option value="">Select a player to add...</option>';
+            team2Select.innerHTML = '<option value="">Select a player to add...</option>';
+            
+            // Add all players to both dropdowns
+            players.forEach(player => {
+                const option1 = document.createElement('option');
+                option1.value = player.name;
+                option1.textContent = `${player.name} (${player.position || 'No position'})`;
+                team1Select.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = player.name;
+                option2.textContent = `${player.name} (${player.position || 'No position'})`;
+                team2Select.appendChild(option2);
+            });
+            
+            // Add event listeners for team selection
+            team1Select.addEventListener('change', () => addPlayerToTeam('team1'));
+            team2Select.addEventListener('change', () => addPlayerToTeam('team2'));
+        }
+
+        function addPlayerToTeam(team) {
+            const select = document.getElementById(`${team}PlayerSelect`);
+            const playerName = select.value;
+            
+            if (!playerName) return;
+            
+            const selectedPlayers = team === 'team1' ? selectedTeam1Players : selectedTeam2Players;
+            const otherTeamPlayers = team === 'team1' ? selectedTeam2Players : selectedTeam1Players;
+            
+            // Check if player is already in this team
+            if (selectedPlayers.includes(playerName)) {
+                alert(`${playerName} is already in ${team === 'team1' ? 'Team 1' : 'Team 2'}!`);
+                select.value = '';
+                return;
+            }
+            
+            // Check if player is in the other team
+            if (otherTeamPlayers.includes(playerName)) {
+                alert(`${playerName} is already in ${team === 'team1' ? 'Team 2' : 'Team 1'}!`);
+                select.value = '';
+                return;
+            }
+            
+            // Add player to team
+            selectedPlayers.push(playerName);
+            updateTeamDisplay(team);
+            select.value = '';
+            
+            // Update goal inputs if scores are set
+            updateGoalInputs();
+        }
+
+        function removePlayerFromTeam(team, playerName) {
+            const selectedPlayers = team === 'team1' ? selectedTeam1Players : selectedTeam2Players;
+            const index = selectedPlayers.indexOf(playerName);
+            
+            if (index > -1) {
+                selectedPlayers.splice(index, 1);
+                updateTeamDisplay(team);
+                updateGoalInputs();
+            }
+        }
+
+        function updateTeamDisplay(team) {
+            const container = document.getElementById(`${team}SelectedPlayers`);
+            const placeholder = document.getElementById(`${team}Placeholder`);
+            const selectedPlayers = team === 'team1' ? selectedTeam1Players : selectedTeam2Players;
+            
+            if (selectedPlayers.length === 0) {
+                container.innerHTML = `<span class="text-sm text-gray-500 dark:text-gray-400" id="${team}Placeholder">No players selected</span>`;
+            } else {
+                container.innerHTML = selectedPlayers.map(playerName => `
+                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
+                        ${playerName}
+                        <button type="button" onclick="removePlayerFromTeam('${team}', '${playerName}')" class="ml-1 text-blue-600 dark:text-blue-300 hover:text-red-600 dark:hover:text-red-400 font-bold">×</button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        function updateGoalInputs() {
+            const score1 = parseInt(document.getElementById('score1').value) || 0;
+            const score2 = parseInt(document.getElementById('score2').value) || 0;
+            const totalGoals = score1 + score2;
+            
+            const goalSection = document.getElementById('goalTrackingSection');
+            
+            if (totalGoals > 0 && (selectedTeam1Players.length > 0 || selectedTeam2Players.length > 0)) {
+                goalSection.classList.remove('hidden');
+                generatePlayerStatsInputs();
+            } else {
+                goalSection.classList.add('hidden');
+            }
+        }
+
+        function generatePlayerStatsInputs() {
+            // Generate Team 1 player stats inputs
+            generateTeamPlayerStats('team1', selectedTeam1Players);
+            
+            // Generate Team 2 player stats inputs
+            generateTeamPlayerStats('team2', selectedTeam2Players);
+        }
+
+        function generateTeamPlayerStats(team, players) {
+            const container = document.getElementById(`${team}PlayerStats`);
+            
+            if (players.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 col-span-full">No players selected for this team</p>';
+                return;
+            }
+            
+            const html = players.map(playerName => `
+                <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div class="font-medium text-sm text-gray-900 dark:text-white mb-2">${playerName}</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Goals</label>
+                            <input type="number" 
+                                   id="${team}_${playerName.replace(/\s+/g, '_')}_goals" 
+                                   min="0" 
+                                   value="0" 
+                                   class="w-full p-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Assists</label>
+                            <input type="number" 
+                                   id="${team}_${playerName.replace(/\s+/g, '_')}_assists" 
+                                   min="0" 
+                                   value="0" 
+                                   class="w-full p-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
         }
 
         function hideAddGameModal() {
             document.getElementById('gameModal').classList.add('hidden');
             document.getElementById('gameModal').classList.remove('flex');
             document.getElementById('gameForm').reset();
+            
+            // Reset team selections
+            selectedTeam1Players = [];
+            selectedTeam2Players = [];
+            updateTeamDisplay('team1');
+            updateTeamDisplay('team2');
+            
+            // Hide goal tracking
+            document.getElementById('goalTrackingSection').classList.add('hidden');
         }
 
         function showAddPlayerModal() { 
@@ -988,6 +1609,10 @@
             document.getElementById('playerModal').classList.add('hidden');
             document.getElementById('playerModal').classList.remove('flex');
             document.getElementById('playerForm').reset();
+            
+            // Hide stats fields when closing modal
+            document.getElementById('playerStatsFields').classList.add('hidden');
+            document.getElementById('playerStatsFields').classList.remove('grid');
             
             // Reset modal to "Add Player" state if it was in edit mode
             if (currentEditingPlayer) {
@@ -1017,37 +1642,77 @@
 
         function addGame() {
             const date = document.getElementById('gameDate').value;
-            const team1PlayersStr = document.getElementById('team1Players').value.trim();
-            const team2PlayersStr = document.getElementById('team2Players').value.trim();
             const score1 = parseInt(document.getElementById('score1').value);
             const score2 = parseInt(document.getElementById('score2').value);
             const location = document.getElementById('location').value.trim() || 'Unknown';
 
-            const team1Goals = document.getElementById('team1Goals').value.trim();
-            const team1Assists = document.getElementById('team1Assists').value.trim();
-            const team2Goals = document.getElementById('team2Goals').value.trim();
-            const team2Assists = document.getElementById('team2Assists').value.trim();
-
-            if (!date || !team1PlayersStr || !team2PlayersStr || isNaN(score1) || isNaN(score2)) {
+            if (!date || isNaN(score1) || isNaN(score2)) {
                 alert('Please fill all required fields');
                 return;
             }
 
-            const team1 = team1PlayersStr.split(',').map(name => name.trim()).filter(name => name);
-            const team2 = team2PlayersStr.split(',').map(name => name.trim()).filter(name => name);
+            if (selectedTeam1Players.length === 0 || selectedTeam2Players.length === 0) {
+                alert('Please select players for both teams');
+                return;
+            }
+
+            // Collect player stats from the new input format
+            const playerStats = {};
+            
+            // Get stats for Team 1 players
+            selectedTeam1Players.forEach(playerName => {
+                const playerId = playerName.replace(/\s+/g, '_');
+                const goalsInput = document.getElementById(`team1_${playerId}_goals`);
+                const assistsInput = document.getElementById(`team1_${playerId}_assists`);
+                
+                playerStats[playerName] = {
+                    team: 1,
+                    goals: goalsInput ? parseInt(goalsInput.value) || 0 : 0,
+                    assists: assistsInput ? parseInt(assistsInput.value) || 0 : 0
+                };
+            });
+
+            // Get stats for Team 2 players
+            selectedTeam2Players.forEach(playerName => {
+                const playerId = playerName.replace(/\s+/g, '_');
+                const goalsInput = document.getElementById(`team2_${playerId}_goals`);
+                const assistsInput = document.getElementById(`team2_${playerId}_assists`);
+                
+                playerStats[playerName] = {
+                    team: 2,
+                    goals: goalsInput ? parseInt(goalsInput.value) || 0 : 0,
+                    assists: assistsInput ? parseInt(assistsInput.value) || 0 : 0
+                };
+            });
+
+            // Validate that total goals match the scores
+            const totalTeam1Goals = Object.values(playerStats)
+                .filter(stats => stats.team === 1)
+                .reduce((sum, stats) => sum + stats.goals, 0);
+            
+            const totalTeam2Goals = Object.values(playerStats)
+                .filter(stats => stats.team === 2)
+                .reduce((sum, stats) => sum + stats.goals, 0);
+
+            if (totalTeam1Goals !== score1) {
+                alert(`Team 1 individual goals (${totalTeam1Goals}) don't match team score (${score1}). Please adjust player goals.`);
+                return;
+            }
+
+            if (totalTeam2Goals !== score2) {
+                alert(`Team 2 individual goals (${totalTeam2Goals}) don't match team score (${score2}). Please adjust player goals.`);
+                return;
+            }
 
             const game = {
                 id: Date.now().toString(),
                 date,
-                team1,
-                team2,
+                team1: [...selectedTeam1Players],
+                team2: [...selectedTeam2Players],
                 score1,
                 score2,
                 location,
-                team1Goals: team1Goals ? team1Goals.split(',').map(name => name.trim()) : [],
-                team1Assists: team1Assists ? team1Assists.split(',').map(name => name.trim()) : [],
-                team2Goals: team2Goals ? team2Goals.split(',').map(name => name.trim()) : [],
-                team2Assists: team2Assists ? team2Assists.split(',').map(name => name.trim()) : [],
+                playerStats,
                 addedBy: currentUser.username,
                 addedAt: new Date().toISOString()
             };
@@ -1108,6 +1773,13 @@
             saveToLocalStorage();
             updateDisplay();
             hideAddPlayerModal();
+            
+            // Refresh players table if the manage players modal is open
+            const playersModalVisible = !document.getElementById('playersModal').classList.contains('hidden');
+            if (playersModalVisible) {
+                populatePlayersTable();
+            }
+            
             alert(`Player ${name} added successfully as ${position}!`);
         }
 
@@ -1129,56 +1801,55 @@
                 const goalsPerGame = player.gamesPlayed > 0 ? (player.goals / player.gamesPlayed).toFixed(1) : '0.0';
                 
                 return `
-                    <div class="bg-white dark:bg-gray-700 rounded-xl p-6 border-2 border-gray-100 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
-                        <div class="flex justify-between items-start mb-4">
+                    <div class="bg-white dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-100 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-md transform hover:-translate-y-0.5">
+                        <div class="flex justify-between items-start mb-3">
                             <div>
-                                <h4 class="text-xl font-bold text-gray-900 dark:text-white">${player.name}</h4>
-                                <p class="text-gray-600 dark:text-gray-400">${player.position || 'Unknown'}</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-500">${player.age ? player.age + ' years old' : 'Age not specified'}</p>
+                                <h4 class="text-lg font-bold text-gray-900 dark:text-white">${player.name}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">${player.position || 'Unknown'}</p>
+                                ${player.age ? `<p class="text-xs text-gray-500">${player.age} years old</p>` : ''}
                             </div>
                             <div class="text-right">
-                                <div class="text-2xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
+                                <div class="text-xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
                                     ${winRate}%
                                 </div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+                                <div class="text-xs text-gray-500">Win Rate</div>
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-4 gap-4 text-center">
-                            <div>
-                                <div class="text-lg font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed}</div>
+                        <div class="grid grid-cols-4 gap-2 text-center mb-3">
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
                             </div>
-                            <div>
-                                <div class="text-lg font-bold text-green-600 dark:text-green-400">⚽${player.goals || 0}</div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-green-600 dark:text-green-400">⚽${player.goals || 0}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">Goals</div>
                             </div>
-                            <div>
-                                <div class="text-lg font-bold text-purple-600 dark:text-purple-400">🅰️${player.assists || 0}</div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-purple-600 dark:text-purple-400">🅰️${player.assists || 0}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">Assists</div>
                             </div>
-                            <div>
-                                <div class="text-lg font-bold text-orange-600 dark:text-orange-400">${goalsPerGame}</div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-orange-600 dark:text-orange-400">${goalsPerGame}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">G/Game</div>
                             </div>
                         </div>
                         
-                        <div class="mt-4 flex justify-between items-center">
+                        <div class="flex justify-between items-center">
                             <div class="text-xs text-gray-400 dark:text-gray-500">
-                                <div>Created: ${new Date(player.createdAt).toLocaleDateString()}</div>
-                                <div>By: ${player.createdBy}</div>
-                                <div class="mt-1">
+                                <div class="mb-1">
                                     <span class="text-green-600 dark:text-green-400">${player.wins}W</span> • 
                                     <span class="text-yellow-600 dark:text-yellow-400">${player.draws}D</span> • 
                                     <span class="text-red-500 dark:text-red-400">${player.losses}L</span>
                                 </div>
+                                <div class="truncate max-w-32">Created: ${new Date(player.createdAt).toLocaleDateString()}</div>
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="editPlayer('${player.id}')" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
+                            <div class="flex gap-1">
+                                <button onclick="editPlayer('${player.id}')" class="px-2 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded font-medium transition-all duration-200 transform hover:scale-105">
                                     ✏️ Edit
                                 </button>
-                                <button onclick="deletePlayer('${player.id}')" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
-                                    🗑️ Delete
+                                <button onclick="deletePlayer('${player.id}')" class="px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded font-medium transition-all duration-200 transform hover:scale-105">
+                                    🗑️
                                 </button>
                             </div>
                         </div>
@@ -1202,6 +1873,12 @@
             document.getElementById('playerName').value = player.name;
             document.getElementById('playerPosition').value = player.position || '';
             document.getElementById('playerAge').value = player.age || '';
+            document.getElementById('playerGoals').value = player.goals || 0;
+            document.getElementById('playerAssists').value = player.assists || 0;
+            
+            // Show stats fields for editing
+            document.getElementById('playerStatsFields').classList.remove('hidden');
+            document.getElementById('playerStatsFields').classList.add('grid');
             
             // Change modal title and button text
             const modalTitle = document.querySelector('#playerModal h3');
@@ -1223,6 +1900,8 @@
             const name = document.getElementById('playerName').value.trim();
             const position = document.getElementById('playerPosition').value.trim();
             const age = document.getElementById('playerAge').value.trim();
+            const goals = parseInt(document.getElementById('playerGoals').value) || 0;
+            const assists = parseInt(document.getElementById('playerAssists').value) || 0;
 
             if (!name) {
                 alert('Player name is required');
@@ -1241,12 +1920,19 @@
                 return;
             }
 
-            // Update player data
+            // Update all editable fields
             currentEditingPlayer.name = name;
             currentEditingPlayer.position = position;
             currentEditingPlayer.age = age ? parseInt(age) : null;
+            currentEditingPlayer.goals = goals;
+            currentEditingPlayer.assists = assists;
+            // Add update tracking
+            currentEditingPlayer.lastUpdatedAt = new Date().toISOString();
+            currentEditingPlayer.lastUpdatedBy = currentUser.username;
 
-            saveToLocalStorage();
+            // Use Firebase service to update player (this handles both Firebase and localStorage)
+            FirebaseService.updatePlayer(currentEditingPlayer);
+            
             updateDisplay();
             hideAddPlayerModal();
             populatePlayersTable(); // Refresh the players table
@@ -1319,56 +2005,55 @@
                 const goalsPerGame = player.gamesPlayed > 0 ? (player.goals / player.gamesPlayed).toFixed(1) : '0.0';
                 
                 return `
-                    <div class="bg-white dark:bg-gray-700 rounded-xl p-6 border-2 border-gray-100 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
-                        <div class="flex justify-between items-start mb-4">
+                    <div class="bg-white dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-100 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-md transform hover:-translate-y-0.5">
+                        <div class="flex justify-between items-start mb-3">
                             <div>
-                                <h4 class="text-xl font-bold text-gray-900 dark:text-white">${player.name}</h4>
-                                <p class="text-gray-600 dark:text-gray-400">${player.position || 'Unknown'}</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-500">${player.age ? player.age + ' years old' : 'Age not specified'}</p>
+                                <h4 class="text-lg font-bold text-gray-900 dark:text-white">${player.name}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">${player.position || 'Unknown'}</p>
+                                ${player.age ? `<p class="text-xs text-gray-500">${player.age} years old</p>` : ''}
                             </div>
                             <div class="text-right">
-                                <div class="text-2xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
+                                <div class="text-xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
                                     ${winRate}%
                                 </div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+                                <div class="text-xs text-gray-500">Win Rate</div>
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-4 gap-4 text-center">
-                            <div>
-                                <div class="text-lg font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed}</div>
+                        <div class="grid grid-cols-4 gap-2 text-center mb-3">
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
                             </div>
-                            <div>
-                                <div class="text-lg font-bold text-green-600 dark:text-green-400">⚽${player.goals || 0}</div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-green-600 dark:text-green-400">⚽${player.goals || 0}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">Goals</div>
                             </div>
-                            <div>
-                                <div class="text-lg font-bold text-purple-600 dark:text-purple-400">🅰️${player.assists || 0}</div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-purple-600 dark:text-purple-400">🅰️${player.assists || 0}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">Assists</div>
                             </div>
-                            <div>
-                                <div class="text-lg font-bold text-orange-600 dark:text-orange-400">${goalsPerGame}</div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-orange-600 dark:text-orange-400">${goalsPerGame}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">G/Game</div>
                             </div>
                         </div>
                         
-                        <div class="mt-4 flex justify-between items-center">
+                        <div class="flex justify-between items-center">
                             <div class="text-xs text-gray-400 dark:text-gray-500">
-                                <div>Created: ${new Date(player.createdAt).toLocaleDateString()}</div>
-                                <div>By: ${player.createdBy}</div>
-                                <div class="mt-1">
+                                <div class="mb-1">
                                     <span class="text-green-600 dark:text-green-400">${player.wins}W</span> • 
                                     <span class="text-yellow-600 dark:text-yellow-400">${player.draws}D</span> • 
                                     <span class="text-red-500 dark:text-red-400">${player.losses}L</span>
                                 </div>
+                                <div class="truncate max-w-32">Created: ${new Date(player.createdAt).toLocaleDateString()}</div>
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="editPlayer('${player.id}')" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
+                            <div class="flex gap-1">
+                                <button onclick="editPlayer('${player.id}')" class="px-2 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded font-medium transition-all duration-200 transform hover:scale-105">
                                     ✏️ Edit
                                 </button>
-                                <button onclick="deletePlayer('${player.id}')" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
-                                    🗑️ Delete
+                                <button onclick="deletePlayer('${player.id}')" class="px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded font-medium transition-all duration-200 transform hover:scale-105">
+                                    🗑️
                                 </button>
                             </div>
                         </div>
@@ -1401,6 +2086,8 @@
                         createdBy: 'auto-generated'
                     };
                     players.push(player);
+                    // Add new player to Firebase
+                    FirebaseService.addPlayer(player);
                 }
 
                 player.gamesPlayed++;
@@ -1417,19 +2104,399 @@
                     player.losses++;
                 }
 
-                // Update goals
-                const goalCount = [...game.team1Goals, ...game.team2Goals].filter(name => name === playerName).length;
-                player.goals += goalCount;
+                // Update goals and assists from the new playerStats format
+                if (game.playerStats && game.playerStats[playerName]) {
+                    const stats = game.playerStats[playerName];
+                    player.goals += stats.goals || 0;
+                    player.assists += stats.assists || 0;
+                }
 
-                // Update assists
-                const assistCount = [...game.team1Assists, ...game.team2Assists].filter(name => name === playerName).length;
-                player.assists += assistCount;
+                // Add update tracking
+                player.lastUpdatedAt = new Date().toISOString();
+                player.lastUpdatedBy = 'auto-updated-from-game';
+
+                // Update player in Firebase
+                FirebaseService.updatePlayer(player);
             });
         }
 
         function getWinPercentage(player) {
             if (player.gamesPlayed === 0) return 0;
             return Math.round((player.wins / player.gamesPlayed) * 100);
+        }
+
+        // Player Profile Functions
+        function showPlayerProfile(playerId) {
+            const player = players.find(p => p.id === playerId || p.name === playerId);
+            if (!player) {
+                alert('Player not found');
+                return;
+            }
+
+            document.getElementById('profileModalTitle').textContent = `${player.name}'s Profile`;
+            
+            const isOwnProfile = currentUser && currentUser.playerId === player.name;
+            
+            const profileHTML = `
+                <div class="space-y-6">
+                    <!-- Profile Picture Section -->
+                    <div class="text-center">
+                        <div class="w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-gray-300 dark:border-gray-600 shadow-xl mb-4">
+                            ${player.profilePicture 
+                                ? `<img src="${player.profilePicture}" alt="${player.name}" class="w-full h-full object-cover">`
+                                : `<div class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-4xl">${player.name.charAt(0).toUpperCase()}</div>`
+                            }
+                        </div>
+                        ${isOwnProfile ? `
+                            <div class="space-y-3">
+                                <input type="file" id="profilePictureInput" accept="image/*" class="hidden" onchange="handleProfilePictureUpload(event)">
+                                <button onclick="document.getElementById('profilePictureInput').click()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors">
+                                    📸 ${player.profilePicture ? 'Change Picture' : 'Add Picture'}
+                                </button>
+                                ${player.profilePicture ? `
+                                    <button onclick="removeProfilePicture()" class="ml-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm transition-colors">
+                                        🗑️ Remove
+                                    </button>
+                                ` : ''}
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-sm mx-auto">
+                                    📐 Images will be automatically cropped to square and compressed for optimal size
+                                </p>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Player Info -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                        <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Player Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name:</label>
+                                ${isOwnProfile ? `
+                                    <input type="text" id="profileName" value="${player.name}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                                ` : `
+                                    <div class="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm">${player.name}</div>
+                                `}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Position:</label>
+                                ${isOwnProfile ? `
+                                    <select id="profilePosition" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                                        <option value="">Select position...</option>
+                                        <option value="Goalkeeper" ${player.position === 'Goalkeeper' ? 'selected' : ''}>Goalkeeper (GK)</option>
+                                        <option value="Defender" ${player.position === 'Defender' ? 'selected' : ''}>Defender (DEF)</option>
+                                        <option value="Winger" ${player.position === 'Winger' ? 'selected' : ''}>Winger (WIN)</option>
+                                        <option value="Forward" ${player.position === 'Forward' ? 'selected' : ''}>Forward (FWD)</option>
+                                        <option value="Universal" ${player.position === 'Universal' ? 'selected' : ''}>Universal (ALL)</option>
+                                    </select>
+                                ` : `
+                                    <div class="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm">${player.position || 'Not specified'}</div>
+                                `}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Age:</label>
+                                ${isOwnProfile ? `
+                                    <input type="number" id="profileAge" value="${player.age || ''}" min="16" max="50" placeholder="Enter age" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                                ` : `
+                                    <div class="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm">${player.age || 'Not specified'}</div>
+                                `}
+                            </div>
+                            ${isOwnProfile ? `
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Set Password:</label>
+                                    <input type="password" id="profilePassword" placeholder="Set profile password" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional: protect your profile with a password</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Stats Section -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                        <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Statistics</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed || 0}</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Games</div>
+                            </div>
+                            <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                <div class="text-2xl font-bold text-green-600 dark:text-green-400">${player.goals || 0}</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Goals</div>
+                            </div>
+                            <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">${player.assists || 0}</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Assists</div>
+                            </div>
+                            <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${getWinPercentage(player)}%</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Win Rate</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-center gap-6 text-sm">
+                            <span class="text-green-600 dark:text-green-400 font-medium">${player.wins || 0} Wins</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">${player.draws || 0} Draws</span>
+                            <span class="text-red-500 dark:text-red-400 font-medium">${player.losses || 0} Losses</span>
+                        </div>
+                    </div>
+
+                    ${isOwnProfile ? `
+                        <div class="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <button onclick="hidePlayerProfile()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 text-sm">
+                                Cancel
+                            </button>
+                            <button onclick="savePlayerProfile()" class="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm">
+                                💾 Save Changes
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <button onclick="hidePlayerProfile()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 text-sm">
+                                Close
+                            </button>
+                        </div>
+                    `}
+                </div>
+            `;
+
+            document.getElementById('playerProfileContent').innerHTML = profileHTML;
+            document.getElementById('playerProfileModal').classList.remove('hidden');
+            document.getElementById('playerProfileModal').classList.add('flex');
+        }
+
+        function hidePlayerProfile() {
+            document.getElementById('playerProfileModal').classList.add('hidden');
+            document.getElementById('playerProfileModal').classList.remove('flex');
+        }
+
+        function showPlayerLogin() {
+            // Populate player dropdown
+            const playerSelect = document.getElementById('playerLoginSelect');
+            playerSelect.innerHTML = '<option value="">Select your name...</option>';
+            
+            players.forEach((player, index) => {
+                const option = document.createElement('option');
+                // Use the player's name as the value for consistency
+                option.value = player.name;
+                option.textContent = player.name;
+                playerSelect.appendChild(option);
+            });
+
+            document.getElementById('playerLoginModal').classList.remove('hidden');
+            document.getElementById('playerLoginModal').classList.add('flex');
+        }
+
+        function hidePlayerLogin() {
+            document.getElementById('playerLoginModal').classList.add('hidden');
+            document.getElementById('playerLoginModal').classList.remove('flex');
+            document.getElementById('playerLoginForm').reset();
+        }
+
+        function loginAsPlayer() {
+            const playerName = document.getElementById('playerLoginSelect').value;
+            const password = document.getElementById('playerPassword').value;
+
+            if (!playerName) {
+                alert('Please select your player name');
+                return;
+            }
+
+            const player = players.find(p => p.name === playerName);
+            if (!player) {
+                alert('Player not found');
+                return;
+            }
+
+            // Check password if player has one set
+            if (player.password && player.password !== password) {
+                alert('Incorrect password');
+                return;
+            }
+
+            // Set player as logged in
+            currentUser = {
+                ...currentUser,
+                playerId: player.name, // Always use name for consistency
+                playerName: player.name,
+                isPlayer: true
+            };
+            
+            saveToLocalStorage();
+            updateUIForUser();
+            hidePlayerLogin();
+            
+            alert(`Welcome, ${player.name}! You can now edit your profile.`);
+            showPlayerProfile(playerName);
+        }
+
+        function handleProfilePictureUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            // Show loading message
+            const currentPlayerName = currentUser.playerId;
+            alert('Processing image... Please wait.');
+
+            // Process and compress the image
+            compressAndCropImage(file, 300, 300, 0.8).then(compressedBase64 => {
+                const player = players.find(p => p.name === currentPlayerName);
+                
+                if (player) {
+                    player.profilePicture = compressedBase64;
+                    FirebaseService.updatePlayer(player);
+                    saveToLocalStorage();
+                    updateDisplay();
+                    updateUIForUser(); // Refresh navigation area to show new profile picture
+                    
+                    // Refresh the profile modal to show new picture
+                    showPlayerProfile(currentPlayerName);
+                    alert('Profile picture updated successfully! 📸');
+                }
+            }).catch(error => {
+                console.error('Error processing image:', error);
+                alert('Error processing image. Please try a different image.');
+            });
+        }
+
+        // Function to compress and crop image
+        function compressAndCropImage(file, targetWidth, targetHeight, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+
+                img.onload = function() {
+                    // Set canvas size to target dimensions
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+
+                    // Calculate crop dimensions to maintain aspect ratio
+                    const sourceAspectRatio = img.width / img.height;
+                    const targetAspectRatio = targetWidth / targetHeight;
+
+                    let sourceX = 0, sourceY = 0, sourceWidth = img.width, sourceHeight = img.height;
+
+                    if (sourceAspectRatio > targetAspectRatio) {
+                        // Source is wider - crop width
+                        sourceWidth = img.height * targetAspectRatio;
+                        sourceX = (img.width - sourceWidth) / 2;
+                    } else {
+                        // Source is taller - crop height
+                        sourceHeight = img.width / targetAspectRatio;
+                        sourceY = (img.height - sourceHeight) / 2;
+                    }
+
+                    // Draw the cropped and resized image
+                    ctx.drawImage(
+                        img,
+                        sourceX, sourceY, sourceWidth, sourceHeight,  // Source crop
+                        0, 0, targetWidth, targetHeight               // Destination
+                    );
+
+                    // Convert to base64 with compression
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                    
+                    // Check final size (should be much smaller now)
+                    const sizeInBytes = Math.round((compressedBase64.length * 3) / 4);
+                    console.log(`Compressed image size: ${(sizeInBytes / 1024).toFixed(1)}KB`);
+                    
+                    resolve(compressedBase64);
+                };
+
+                img.onerror = function() {
+                    reject(new Error('Failed to load image'));
+                };
+
+                // Create object URL to load the image
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                };
+                reader.onerror = function() {
+                    reject(new Error('Failed to read file'));
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeProfilePicture() {
+            if (!confirm('Are you sure you want to remove your profile picture?')) {
+                return;
+            }
+
+            const currentPlayerName = currentUser.playerId; // This is now always a name
+            const player = players.find(p => p.name === currentPlayerName);
+            
+            if (player) {
+                delete player.profilePicture;
+                FirebaseService.updatePlayer(player);
+                saveToLocalStorage();
+                updateDisplay();
+                updateUIForUser(); // Refresh navigation area to remove profile picture
+                
+                // Refresh the profile modal
+                showPlayerProfile(currentPlayerName);
+                alert('Profile picture removed successfully!');
+            }
+        }
+
+        function savePlayerProfile() {
+            const currentPlayerName = currentUser.playerId; // This is now always a name
+            const player = players.find(p => p.name === currentPlayerName);
+            
+            if (!player) {
+                alert('Player not found');
+                return;
+            }
+
+            // Get updated values
+            const newName = document.getElementById('profileName').value.trim();
+            const newPosition = document.getElementById('profilePosition').value;
+            const newAge = document.getElementById('profileAge').value;
+            const newPassword = document.getElementById('profilePassword').value;
+
+            if (!newName) {
+                alert('Player name is required');
+                return;
+            }
+
+            // Check if name is already taken by another player
+            const existingPlayer = players.find(p => p.name.toLowerCase() === newName.toLowerCase() && p.name !== currentPlayerName);
+            if (existingPlayer) {
+                alert('A player with this name already exists');
+                return;
+            }
+
+            // Update player data
+            player.name = newName;
+            player.position = newPosition;
+            player.age = newAge ? parseInt(newAge) : null;
+            
+            if (newPassword) {
+                player.password = newPassword;
+            }
+
+            player.lastUpdatedAt = new Date().toISOString();
+            player.lastUpdatedBy = 'player-self-update';
+
+            // Update the currentUser.playerId if the name changed
+            if (currentPlayerName !== newName) {
+                currentUser.playerId = newName;
+                currentUser.playerName = newName;
+            }
+
+            // Update in Firebase and local storage
+            FirebaseService.updatePlayer(player);
+            saveToLocalStorage();
+            updateDisplay();
+            updateUIForUser(); // Refresh navigation area to reflect name changes
+            
+            hidePlayerProfile();
+            alert('Profile updated successfully!');
         }
 
         // Migration function to move localStorage data to Firebase
@@ -1596,7 +2663,7 @@
             }
         }
 
-        // Debug function to inspect localStorage
+        // Debug function to inspect localStorage (available in console as inspectLocalStorage())
         function inspectLocalStorage() {
             console.log('=== localStorage Inspection ===');
             console.log('Origin:', window.location.origin);
@@ -1619,31 +2686,17 @@
             console.log('=== End Inspection ===');
         }
 
-        // Make functions available globally for console debugging
-        window.resetAllData = resetAllData;
+        // Make debug function available for console debugging only
         window.inspectLocalStorage = inspectLocalStorage;
 
         // Initialize app
         async function initializeApp() {
             console.log('Initializing FooTable app...');
-            console.log('Current URL origin:', window.location.origin);
-            console.log('Current protocol:', window.location.protocol);
             
             initializeTheme();
             loadFromLocalStorage();
-            
-            // Debug localStorage content
-            console.log('Current localStorage contents:');
-            console.log('- Games:', localStorage.getItem('footable-games'));
-            console.log('- Players:', localStorage.getItem('footable-players'));
-            console.log('- Users:', localStorage.getItem('footable-users'));
-            console.log('- Players array length after load:', players.length);
-            
             initializeDefaultUsers();
             initializeSamplePlayers();
-            
-            console.log('- Players array length after sample init:', players.length);
-            
             updateUIForUser();
             updateDisplay();
             
