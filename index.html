@@ -3964,9 +3964,10 @@
             const ctx = canvas.getContext('2d');
             const circle = document.getElementById('cropCircle');
             
-            // Set canvas size to fit the image (max 600px width)
-            const maxWidth = 600;
-            const maxHeight = 500;
+            // Mobile-friendly canvas size
+            const isMobile = window.innerWidth < 768;
+            const maxWidth = isMobile ? Math.min(window.innerWidth - 40, 350) : 500;
+            const maxHeight = isMobile ? Math.min(window.innerHeight - 200, 350) : 500;
             let displayWidth = cropperImage.width;
             let displayHeight = cropperImage.height;
             
@@ -3989,8 +3990,10 @@
             ctx.drawImage(cropperImage, 0, 0, canvas.width, canvas.height);
             
             
-            // Fixed circle size - scale it based on canvas size
-            const circleDisplaySize = Math.min(300, canvas.width * 0.8, canvas.height * 0.8);
+            // Smaller circle for mobile, easier to drag
+            const circleDisplaySize = isMobile 
+                ? Math.min(200, canvas.width * 0.7, canvas.height * 0.7)
+                : Math.min(250, canvas.width * 0.75, canvas.height * 0.75);
             cropperState.size = circleDisplaySize;
             cropperState.x = Math.max(0, (canvas.width - circleDisplaySize) / 2);
             cropperState.y = Math.max(0, (canvas.height - circleDisplaySize) / 2);
@@ -4018,21 +4021,18 @@
             const circle = document.getElementById('cropCircle');
             
             // Handle dragging the circle (no resizing - fixed size)
-            circle.onmousedown = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
+            const startDrag = function(clientX, clientY) {
                 cropperState.isDragging = true;
-                cropperState.startX = e.clientX;
-                cropperState.startY = e.clientY;
+                cropperState.startX = clientX;
+                cropperState.startY = clientY;
                 cropperState.startPosX = cropperState.x;
                 cropperState.startPosY = cropperState.y;
             };
             
-            document.onmousemove = function(e) {
+            const moveDrag = function(clientX, clientY) {
                 if (cropperState.isDragging) {
-                    const dx = e.clientX - cropperState.startX;
-                    const dy = e.clientY - cropperState.startY;
+                    const dx = clientX - cropperState.startX;
+                    const dy = clientY - cropperState.startY;
                     
                     cropperState.x = Math.max(0, Math.min(canvas.width - cropperState.size, cropperState.startPosX + dx));
                     cropperState.y = Math.max(0, Math.min(canvas.height - cropperState.size, cropperState.startPosY + dy));
@@ -4041,9 +4041,40 @@
                 }
             };
             
-            document.onmouseup = function() {
+            const endDrag = function() {
                 cropperState.isDragging = false;
             };
+            
+            // Mouse events
+            circle.onmousedown = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                startDrag(e.clientX, e.clientY);
+            };
+            
+            document.onmousemove = function(e) {
+                moveDrag(e.clientX, e.clientY);
+            };
+            
+            document.onmouseup = endDrag;
+            
+            // Touch events for mobile
+            circle.ontouchstart = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const touch = e.touches[0];
+                startDrag(touch.clientX, touch.clientY);
+            };
+            
+            document.ontouchmove = function(e) {
+                if (cropperState.isDragging) {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    moveDrag(touch.clientX, touch.clientY);
+                }
+            };
+            
+            document.ontouchend = endDrag;
         }
 
         function closeImageCropper() {

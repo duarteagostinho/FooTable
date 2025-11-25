@@ -38,17 +38,25 @@ service cloud.firestore {
       allow update: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
     
-    // Players collection - authenticated users can read, only admins can write
+    // Players collection - anyone can read, admins can do anything, users can update their own linked profile
     match /players/{playerId} {
-      allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null && 
+      allow read;
+      allow create, delete: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      allow update: if request.auth != null && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         request.resource.data.email == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email)
+      );
     }
     
-    // Games collection - authenticated users can read, only admins can write
+    // Games collection - anyone can read, only admins can write
     match /games/{gameId} {
-      allow read: if request.auth != null;
+      allow read;
       allow create, update, delete: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
     
@@ -66,7 +74,34 @@ service cloud.firestore {
 
 4. Click **Publish**
 
-### 3. Create Your Admin Account
+### 3. Update Firebase Storage Rules (for Profile Pictures)
+
+1. In Firebase Console, go to **Storage**
+2. Click the **Rules** tab
+3. Replace the rules with this:
+
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow anyone to read profile pictures
+    match /profilePictures/{allPaths=**} {
+      allow read;
+      allow write: if request.auth != null;
+    }
+    
+    // Allow anyone to read any uploaded images
+    match /{allPaths=**} {
+      allow read;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+4. Click **Publish**
+
+### 4. Create Your Admin Account
 
 1. Go to your deployed website
 2. Click **Login**
