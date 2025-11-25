@@ -3,22 +3,2980 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FooTable - Under Maintenance</title>
+    <title>FooTable - Football Game Results Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in',
+                        'slide-in': 'slideIn 0.7s ease-out',
+                        'bounce-in': 'bounceIn 0.6s ease-out'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1.0); }
+        }
+    </style>
+
+    <!-- Firebase CDN -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDEJfOfMcYQZ54BnwwK_Kk_1T0jBKCKoo0",
+            authDomain: "footable-2025.firebaseapp.com",
+            projectId: "footable-2025",
+            storageBucket: "footable-2025.firebasestorage.app",
+            messagingSenderId: "760639912370",
+            appId: "1:760639912370:web:0e40d42298eaf1ce21ccab"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged };
+        window.firebaseInitialized = true;
+        
+        console.log('Firebase initialized successfully');
+    </script>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-500 via-purple-600 to-blue-800 flex items-center justify-center p-4">
-    <div class="text-center text-white">
-        <div class="mb-8 animate-bounce">
-            <span class="text-9xl">🔧</span>
+
+<body class="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
+
+
+    <!-- Navigation -->
+    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 backdrop-blur-sm bg-white/80 dark:bg-gray-900/80">
+        <div class="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 lg:h-18">
+                <div class="flex items-center">
+                    <h1 class="text-xl md:text-2xl lg:text-3xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
+                        <span class="text-2xl">⚽</span>
+                        <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">FooTable</span>
+                    </h1>
+                </div>
+                <div class="flex items-center gap-4 md:gap-6">
+                    <!-- Firebase Status -->
+                    <div id="firebaseIndicator" class="flex items-center gap-2">
+                        <div id="connectionStatus" class="w-3 h-3 rounded-full bg-red-500" title="Offline"></div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Firebase</span>
+                    </div>
+                    
+                    <!-- Dark Mode Toggle -->
+                    <button id="themeToggle" onclick="toggleTheme()" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    
+                    <div id="userInfo" class="text-sm md:text-base text-gray-700 dark:text-gray-300"></div>
+                    
+
+                    <button id="loginBtn" onclick="showLogin()" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 md:px-6 py-2.5 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm md:text-base">
+                        Login
+                    </button>
+                </div>
+            </div>
         </div>
-        <h1 class="text-5xl md:text-7xl font-bold mb-6">Under Maintenance</h1>
-        <p class="text-xl md:text-2xl mb-4 opacity-90">We're making some improvements!</p>
-        <p class="text-lg opacity-75">We'll be back shortly. Thanks for your patience.</p>
-        <div class="mt-12">
-            <div class="inline-block p-4 bg-white/10 backdrop-blur rounded-xl">
-                <p class="text-sm">⚽ FooTable - Football Game Tracker</p>
+    </nav>
+
+    <div id="app" class="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="text-center mb-16 lg:mb-20 animate-fade-in">
+            <div class="inline-block p-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 shadow-2xl mb-8">
+                <span class="text-5xl">⚽</span>
+            </div>
+            <h2 class="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent mb-6 leading-tight">
+                Football Game Tracker
+            </h2>
+            <p class="text-gray-600 dark:text-gray-400 text-lg md:text-xl lg:text-2xl max-w-4xl mx-auto font-medium">
+                Keep track of your weekend games with friends and see who's the champion! 🏆
+            </p>
+        </div>
+
+        <!-- Global Search Bar -->
+        <div class="max-w-4xl mx-auto mb-12 lg:mb-16 animate-fade-in">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-xl hover:shadow-2xl transition-all duration-300">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <!-- Search Input -->
+                    <div class="flex-1 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text" id="globalSearchInput" placeholder="Search players, games, or locations..." class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base">
+                    </div>
+                    
+                    <!-- Filter Dropdown -->
+                    <div class="sm:w-48">
+                        <select id="searchFilter" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base" onchange="performSearch()">
+                            <option value="all">🔍 Search All</option>
+                            <option value="players">👥 Players Only</option>
+                            <option value="games">⚽ Games Only</option>
+                            <option value="locations">📍 Locations Only</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Search Button -->
+                    <button onclick="performSearch()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl whitespace-nowrap">
+                        🔍 Search
+                    </button>
+                </div>
+                
+                <!-- Search Results -->
+                <div id="searchResults" class="hidden mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Search Results:</h4>
+                    <div id="searchResultsContent" class="space-y-4">
+                        <!-- Results will be populated here -->
+                    </div>
+                    <button onclick="clearSearch()" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                        ✕ Clear Results
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Controls -->
+        <div class="text-center mb-12 lg:mb-16 animate-slide-in">
+            <div id="adminControls" class="hidden flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 lg:gap-8">
+                <button onclick="showAddGameModal()" class="group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 md:px-10 lg:px-12 py-4 md:py-5 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl">
+                    <span class="flex items-center justify-center gap-3">
+                        ⚽ Add New Game
+                    </span>
+                </button>
+                
+                <button onclick="showPlayersModal()" class="group bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-8 md:px-10 lg:px-12 py-4 md:py-5 rounded-xl font-semibold text-base md:text-lg transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl">
+                    👥 Manage Players
+                </button>
+            </div>
+            
+
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-8 lg:gap-10 animate-fade-in">
+            <!-- Recent Games -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/20 transition-all duration-300 transform hover:-translate-y-1">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-3 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 shadow-lg">
+                        <span class="text-white text-2xl">🏟️</span>
+                    </div>
+                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Recent Games</h3>
+                </div>
+                <div id="recentGames" class="space-y-5">
+                    <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No games yet! Add your first game above. 🎯</p>
+                </div>
+            </div>
+
+            <!-- Top Players -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/20 transition-all duration-300 transform hover:-translate-y-1">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-3 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg">
+                        <span class="text-white text-2xl">🏆</span>
+                    </div>
+                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Top Players</h3>
+                </div>
+                <div id="topPlayers">
+                    <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No player stats yet! 📊</p>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 lg:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/20 transition-all duration-300 transform hover:-translate-y-1 lg:col-span-2 xl:col-span-1">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+                        <span class="text-white text-2xl">📈</span>
+                    </div>
+                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Quick Stats</h3>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center p-5 lg:p-6 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800">
+                        <span class="font-semibold text-lg text-gray-800 dark:text-gray-200">Total Games:</span>
+                        <span id="totalGames" class="font-bold text-3xl text-blue-600 dark:text-blue-400">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-5 lg:p-6 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
+                        <span class="font-semibold text-lg text-gray-800 dark:text-gray-200">Total Players:</span>
+                        <span id="totalPlayers" class="font-bold text-3xl text-green-600 dark:text-green-400">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-5 lg:p-6 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800">
+                        <span class="font-semibold text-lg text-gray-800 dark:text-gray-200">Average Goals:</span>
+                        <span id="avgGoals" class="font-bold text-3xl text-purple-600 dark:text-purple-400">0</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+
+
+    <!-- Include all other modals from original file... -->
+    <!-- (Login, Add Game, Add Player, Players Management, Player Profile modals) -->
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
+                        <span class="text-white text-xl">🔐</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Login</h3>
+                </div>
+                
+                <form id="loginForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📧 Email:</label>
+                        <input type="email" id="loginUsername" placeholder="Enter your email" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🔑 Password:</label>
+                        <input type="password" id="loginPassword" placeholder="Enter password (min 6 characters)" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div class="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                        <strong>New user?</strong> Enter your email and password to create an account.<br>
+                        <strong>Existing user?</strong> Login with your credentials.<br>
+                        <span class="text-xs mt-1 block">Secured by Firebase Authentication 🔒</span>
+                    </div>
+                </form>
+                
+                <div class="flex gap-4 mt-8 justify-end">
+                    <button onclick="hideLogin()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                        Cancel
+                    </button>
+                    <button onclick="login()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        🔓 Login
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Game Modal -->
+    <div id="gameModal" class="fixed inset-0 bg-black/60 backdrop-blur-md hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
+                        <span class="text-white text-xl">⚽</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Add New Game</h3>
+                </div>
+                
+                <form id="gameForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">📅 Date:</label>
+                            <input type="date" id="gameDate" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">� Location:</label>
+                            <input type="text" id="location" placeholder="Local park" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm">
+                        </div>
+                    </div>
+                    
+                    <!-- Team Selection -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">👥 Team 1 Players:</label>
+                            <div class="space-y-2">
+                                <select id="team1PlayerSelect" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                                    <option value="">Select a player to add...</option>
+                                </select>
+                                <div id="team1SelectedPlayers" class="flex flex-wrap gap-2 min-h-[2rem] p-2 border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700">
+                                    <span class="text-sm text-gray-500 dark:text-gray-400" id="team1Placeholder">No players selected</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">👥 Team 2 Players:</label>
+                            <div class="space-y-2">
+                                <select id="team2PlayerSelect" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                                    <option value="">Select a player to add...</option>
+                                </select>
+                                <div id="team2SelectedPlayers" class="flex flex-wrap gap-2 min-h-[2rem] p-2 border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700">
+                                    <span class="text-sm text-gray-500 dark:text-gray-400" id="team2Placeholder">No players selected</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">🥅 Team 1 Score:</label>
+                            <input type="number" id="score1" min="0" value="0" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" onchange="updateGoalInputs()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">🥅 Team 2 Score:</label>
+                            <input type="number" id="score2" min="0" value="0" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm" onchange="updateGoalInputs()">
+                        </div>
+                    </div>
+
+                    <!-- Goals and Assists Tracking -->
+                    <div id="goalTrackingSection" class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 hidden">
+                        <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                            ⚽ Player Stats for this Match
+                        </h4>
+                        
+                        <div class="space-y-6">
+                            <!-- Team 1 Stats -->
+                            <div>
+                                <h5 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                    🔵 Team 1 Player Stats:
+                                </h5>
+                                <div id="team1PlayerStats" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Team 1 player stats will be generated here -->
+                                </div>
+                            </div>
+                            
+                            <!-- Team 2 Stats -->
+                            <div>
+                                <h5 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                    🔴 Team 2 Player Stats:
+                                </h5>
+                                <div id="team2PlayerStats" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Team 2 player stats will be generated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                
+                <div class="flex gap-3 mt-6 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button onclick="hideAddGameModal()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 text-sm">
+                        Cancel
+                    </button>
+                    <button onclick="addGame()" class="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm">
+                        🎯 Add Game
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Player Modal -->
+    <div id="playerModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[60] animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600">
+                        <span class="text-white text-xl">👤</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Add New Player</h3>
+                </div>
+                
+                <form id="playerForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">👤 Player Name (required):</label>
+                        <input type="text" id="playerName" placeholder="Enter player name" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">⚽  Position:</label>
+                        <select id="playerPosition" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="">Select position...</option>
+                            <option value="Goalkeeper">Goalkeeper (GK)</option>
+                            <option value="Defender">Defender (DEF)</option>
+                            <option value="Winger">Winger (WIN)</option>
+                            <option value="Forward">Forward (FWD)</option>
+                            <option value="Universal">Universal (ALL)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🎂 Age (optional):</label>
+                        <input type="number" id="playerAge" placeholder="Enter age" min="16" max="50" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📧 Email (optional - to link to user account):</label>
+                        <input type="email" id="playerEmail" placeholder="player@example.com" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Link this player to a user account for profile access</p>
+                    </div>
+                    
+                    <!-- Goals and Assists (only visible during edit) -->
+                    <div id="playerStatsFields" class="hidden grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">⚽ Goals:</label>
+                            <input type="number" id="playerGoals" placeholder="0" min="0" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🅰️ Assists:</label>
+                            <input type="number" id="playerAssists" placeholder="0" min="0" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                    </div>
+                </form>
+                
+                <div class="flex gap-4 mt-8 justify-end">
+                    <button onclick="hideAddPlayerModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                        Cancel
+                    </button>
+                    <button onclick="addPlayer()" class="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        👤 Add Player
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Players Management Modal -->
+    <div id="playersModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
+                            <span class="text-white text-xl">👥</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Player Management</h3>
+                    </div>
+                    <button onclick="hidePlayersModal()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold">×</button>
+                </div>
+                
+                <div class="mb-6">
+                    <div class="flex gap-3 mb-4">
+                        <input type="text" id="playerSearch" placeholder="Search players..." class="flex-1 p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                        <select id="positionFilter" class="p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                            <option value="">All Positions</option>
+                            <option value="Goalkeeper">Goalkeeper</option>
+                            <option value="Defender">Defender</option>
+                            <option value="Winger">Winger</option>
+                            <option value="Forward">Forward</option>
+                            <option value="Universal">Universal</option>
+                        </select>
+                        <button onclick="showAddPlayerModal()" class="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl whitespace-nowrap text-sm">
+                            👤 Add Player
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="max-h-[50vh] overflow-y-auto">
+                    <div id="playersTable" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Players will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="flex justify-end mt-6">
+                    <button onclick="hidePlayersModal()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-all duration-200 transform hover:scale-105">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Profile Modal -->
+    <div id="playerProfileModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600">
+                            <span class="text-white text-xl">👤</span>
+                        </div>
+                        <h3 id="profileModalTitle" class="text-2xl font-bold text-gray-900 dark:text-white">Player Profile</h3>
+                    </div>
+                    <button onclick="hidePlayerProfile()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold">×</button>
+                </div>
+                
+                <div id="playerProfileContent">
+                    <!-- Profile content will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Cropper Modal -->
+    <div id="imageCropperModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Crop Profile Picture</h3>
+                    <button onclick="closeImageCropper()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold">×</button>
+                </div>
+                
+                <div class="mb-4 flex justify-center bg-gray-900 rounded-lg p-4">
+                    <div id="cropperContainer" class="relative" style="display: inline-block;">
+                        <canvas id="cropperCanvas" class="max-w-full max-h-[500px] block"></canvas>
+                        <div id="cropCircle" class="absolute border-4 border-blue-500 rounded-full cursor-move pointer-events-auto" style="width: 300px; height: 300px; top: 50px; left: 50px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.7);"></div>
+                    </div>
+                </div>
+                
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">
+                    💡 Drag the circle to select the area you want (300x300px fixed size)
+                </div>
+                
+                <div class="flex gap-3 relative z-10">
+                    <button onclick="closeImageCropper()" class="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-semibold shadow-lg">
+                        Cancel
+                    </button>
+                    <button onclick="applyCrop()" class="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition font-semibold shadow-lg">
+                        ✂️ Crop & Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let games = [];
+        let players = [];
+        let users = [];
+        let currentUser = null;
+        let currentEditingPlayer = null;
+        let firebaseInitialized = false;
+        let unsubscribeFunctions = [];
+        let cropperImage = null;
+        let cropperState = { x: 50, y: 50, size: 200, isDragging: false, isResizing: false, resizeCorner: null, startX: 0, startY: 0 };
+
+        // Firebase service class
+        class FirebaseService {
+            static async initializeFirebase(config) {
+                try {
+                    console.log('Attempting to initialize Firebase with config:', config);
+                    
+                    // Validate the config
+                    if (!config.apiKey || !config.projectId || config.apiKey === "your-api-key") {
+                        throw new Error('Invalid Firebase config: missing or placeholder values');
+                    }
+                    
+                    // Re-initialize Firebase by reloading the modules with the new config
+                    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+                    const { getFirestore, connectFirestoreEmulator } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                    
+                    // Try to initialize Firebase app
+                    let app;
+                    try {
+                        app = initializeApp(config, 'footable-' + Date.now()); // Use unique name to avoid conflicts
+                    } catch (error) {
+                        if (error.code === 'app/duplicate-app') {
+                            // If app already exists, get it
+                            console.log('Firebase app already exists, using existing app');
+                            const { getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+                            const apps = getApps();
+                            app = apps.length > 0 ? apps[0] : initializeApp(config);
+                        } else {
+                            throw error;
+                        }
+                    }
+                    
+                    const db = getFirestore(app);
+                    
+                    // Test the connection by trying to read from Firestore
+                    const { getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                    
+                    // Try a simple read operation to test the connection
+                    console.log('Testing Firebase connection...');
+                    const testCollection = collection(db, 'test');
+                    await getDocs(testCollection);
+                    console.log('Firebase connection test successful!');
+                    
+                    // Update global Firebase object with all necessary functions
+                    const { addDoc, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                    
+                    window.firebase = { 
+                        db, 
+                        collection, 
+                        addDoc, 
+                        getDocs, 
+                        doc, 
+                        updateDoc, 
+                        deleteDoc, 
+                        query, 
+                        orderBy, 
+                        onSnapshot, 
+                        serverTimestamp 
+                    };
+                    
+                    firebaseInitialized = true;
+                    updateConnectionStatus(true);
+                    
+                    // Setup real-time listeners
+                    this.setupListeners();
+                    
+                    console.log('Firebase initialized successfully!');
+                    return true;
+                } catch (error) {
+                    console.error('Firebase initialization failed:', error);
+                    console.error('Error details:', error.message);
+                    firebaseInitialized = false;
+                    updateConnectionStatus(false);
+                    return false;
+                }
+            }
+
+            static setupListeners() {
+                if (!window.firebaseInitialized) {
+                    console.log('Cannot setup Firebase listeners - not initialized');
+                    return;
+                }
+
+                console.log('🔥 Setting up Firebase data listeners...');
+
+                // Listen for games changes
+                const gamesQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'games'), 
+                    window.firebase.orderBy('date', 'desc')
+                );
+                
+                const unsubGames = window.firebase.onSnapshot(gamesQuery, 
+                    (snapshot) => {
+                        console.log('📊 Games data received:', snapshot.docs.length, 'games');
+                        games = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        updateDisplay();
+                    },
+                    (error) => {
+                        console.error('❌ Error loading games:', error);
+                        console.error('Error code:', error.code);
+                        console.error('Error message:', error.message);
+                    }
+                );
+                unsubscribeFunctions.push(unsubGames);
+
+                // Listen for players changes
+                const playersQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'players'), 
+                    window.firebase.orderBy('name')
+                );
+                
+                const unsubPlayers = window.firebase.onSnapshot(playersQuery, 
+                    (snapshot) => {
+                        console.log('👥 Players data received:', snapshot.docs.length, 'players');
+                        players = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        updateDisplay();
+                    },
+                    (error) => {
+                        console.error('❌ Error loading players:', error);
+                        console.error('Error code:', error.code);
+                        console.error('Error message:', error.message);
+                    }
+                );
+                unsubscribeFunctions.push(unsubPlayers);
+            }
+
+            static async addGame(gameData) {
+                if (!firebaseInitialized) {
+                    // Fallback to localStorage
+                    games.push({ ...gameData, id: Date.now().toString() });
+                    saveToLocalStorage();
+                    return;
+                }
+
+                try {
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'games'), 
+                        { ...gameData, createdAt: window.firebase.serverTimestamp() }
+                    );
+                } catch (error) {
+                    console.error('Error adding game:', error);
+                    // Fallback to localStorage
+                    games.push({ ...gameData, id: Date.now().toString() });
+                    saveToLocalStorage();
+                }
+            }
+
+            static async addPlayer(playerData) {
+                if (!firebaseInitialized) {
+                    // When Firebase is not initialized, the player is already added to the array in addPlayer()
+                    // Just save to localStorage
+                    saveToLocalStorage();
+                    return;
+                }
+
+                try {
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'players'), 
+                        { ...playerData, createdAt: window.firebase.serverTimestamp() }
+                    );
+                } catch (error) {
+                    console.error('Error adding player to Firebase:', error);
+                    // Player is already in local array, just save to localStorage as fallback
+                    saveToLocalStorage();
+                }
+            }
+
+            static async updatePlayer(playerData) {
+                console.log('FirebaseService.updatePlayer called with:', playerData);
+                
+                if (!window.firebaseInitialized) {
+                    console.log('Firebase not initialized, saving to localStorage only');
+                    // When Firebase is not initialized, just save to localStorage
+                    saveToLocalStorage();
+                    return;
+                }
+
+                try {
+                    // Find the Firebase document ID for this player
+                    const playersQuery = window.firebase.query(
+                        window.firebase.collection(window.firebase.db, 'players')
+                    );
+                    const snapshot = await window.firebase.getDocs(playersQuery);
+                    
+                    let docId = null;
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        if (data.name === playerData.name || (data.id && data.id == playerData.id)) {
+                            docId = doc.id;
+                        }
+                    });
+
+                    if (docId) {
+                        console.log('Updating Firebase document:', docId);
+                        await window.firebase.updateDoc(
+                            window.firebase.doc(window.firebase.db, 'players', docId),
+                            { 
+                                ...playerData, 
+                                lastUpdatedAt: window.firebase.serverTimestamp(),
+                                lastUpdatedBy: playerData.lastUpdatedBy || 'unknown'
+                            }
+                        );
+                        console.log('✅ Player updated in Firebase successfully');
+                    } else {
+                        console.warn('Player not found in Firebase, saving locally only');
+                        saveToLocalStorage();
+                    }
+                } catch (error) {
+                    console.error('❌ Error updating player in Firebase:', error);
+                    console.error('Error details:', error.message);
+                    // Fallback to localStorage
+                    saveToLocalStorage();
+                }
+            }
+        }
+
+        // Theme management
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('footable-theme') || 'light';
+            const isDark = savedTheme === 'dark';
+            
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').textContent = '☀️';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').textContent = '🌙';
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            if (isDark) {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').textContent = '🌙';
+                localStorage.setItem('footable-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').textContent = '☀️';
+                localStorage.setItem('footable-theme', 'dark');
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.className = 'w-3 h-3 rounded-full bg-green-500';
+                statusEl.title = 'Connected to Firebase';
+            } else {
+                statusEl.className = 'w-3 h-3 rounded-full bg-red-500';
+                statusEl.title = 'Using Local Storage (Offline)';
+            }
+        }
+
+
+
+        function saveToLocalStorage() {
+            localStorage.setItem('footable-games', JSON.stringify(games));
+            localStorage.setItem('footable-players', JSON.stringify(players));
+            localStorage.setItem('footable-users', JSON.stringify(users));
+            localStorage.setItem('footable-currentUser', JSON.stringify(currentUser));
+        }
+
+        function loadFromLocalStorage() {
+            games = JSON.parse(localStorage.getItem('footable-games') || '[]');
+            players = JSON.parse(localStorage.getItem('footable-players') || '[]');
+            users = JSON.parse(localStorage.getItem('footable-users') || '[]');
+            currentUser = JSON.parse(localStorage.getItem('footable-currentUser') || 'null');
+        }
+
+        // Initialize default admin user and sample data
+        function initializeDefaultUsers() {
+            if (users.length === 0) {
+                users.push({
+                    id: 'admin-' + Date.now(),
+                    username: 'admin',
+                    password: 'admin123',
+                    isAdmin: true,
+                    createdAt: new Date().toISOString()
+                });
+                saveToLocalStorage();
+            }
+        }
+
+        function updateDisplay() {
+            // Update recent games
+            const recentGamesHTML = games.length === 0 
+                ? '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No games yet! Add your first game above. 🎯</p>'
+                : games.slice(-5).reverse().map(game => `
+                    <div class="p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300 hover:shadow-lg dark:hover:shadow-gray-900/20 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-850">
+                        <div class="flex justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            <span class="flex items-center gap-2 font-medium">📅 ${game.date}</span>
+                            <span class="flex items-center gap-2 font-medium">📍 ${game.location}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div class="text-left flex-1">
+                                <div class="font-bold text-gray-900 dark:text-white mb-2">Team 1</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-300 font-medium">${game.team1.join(', ')}</div>
+                            </div>
+                            <div class="text-center px-6">
+                                <div class="font-black text-3xl ${game.score1 > game.score2 ? 'text-green-600 dark:text-green-400' : game.score1 < game.score2 ? 'text-red-500 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'} mb-2">
+                                    ${game.score1} - ${game.score2}
+                                </div>
+                                <div class="text-xs font-semibold ${game.score1 > game.score2 ? 'text-green-600 dark:text-green-400' : game.score1 < game.score2 ? 'text-red-500 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}">
+                                    ${game.score1 > game.score2 ? '🏆 Team 1 Wins!' : game.score1 < game.score2 ? '🏆 Team 2 Wins!' : '🤝 Draw!'}
+                                </div>
+                            </div>
+                            <div class="text-right flex-1">
+                                <div class="font-bold text-gray-900 dark:text-white mb-2">Team 2</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-300 font-medium">${game.team2.join(', ')}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            
+            document.getElementById('recentGames').innerHTML = recentGamesHTML;
+
+            // Update top players
+            const topPlayersHTML = players.length === 0
+                ? '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No player stats yet! 📊</p>'
+                : players.sort((a, b) => {
+                    const aWinRate = getWinPercentage(a);
+                    const bWinRate = getWinPercentage(b);
+                    
+                    if (aWinRate !== bWinRate) {
+                        return bWinRate - aWinRate;
+                    }
+                    
+                    const aGoals = a.goals || 0;
+                    const bGoals = b.goals || 0;
+                    
+                    if (aGoals !== bGoals) {
+                        return bGoals - aGoals;
+                    }
+                    
+                    const aAssists = a.assists || 0;
+                    const bAssists = b.assists || 0;
+                    
+                    if (aAssists !== bAssists) {
+                        return bAssists - aAssists;
+                    }
+                    
+                    return b.gamesPlayed - a.gamesPlayed;
+                }).slice(0, 5).map((player, index) => `
+                    <div class="flex justify-between items-center py-5 px-5 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-lg transition-all duration-300 group">
+                        <div class="flex items-center gap-4">
+                            <div class="relative">
+                                <div class="w-12 h-12 rounded-full overflow-hidden border-2 ${
+                                    index === 0 ? 'border-yellow-400' : index === 1 ? 'border-gray-400' : index === 2 ? 'border-amber-600' : 'border-gray-300'
+                                } shadow-lg transition-transform duration-300 group-hover:scale-110">
+                                    ${player.profilePicture 
+                                        ? `<img src="${player.profilePicture}" alt="${player.name}" class="w-full h-full object-cover">`
+                                        : `<div class="w-full h-full bg-gradient-to-br ${
+                                            index === 0 ? 'from-yellow-400 to-orange-500' :
+                                            index === 1 ? 'from-gray-300 to-gray-500' :
+                                            index === 2 ? 'from-amber-600 to-yellow-700' :
+                                            'from-blue-500 to-indigo-600'
+                                        } flex items-center justify-center text-white font-bold text-lg">
+                                            ${player.profilePicture ? '' : player.name.charAt(0).toUpperCase()}
+                                        </div>`
+                                    }
+                                </div>
+                                <div class="absolute -top-1 -right-1 w-6 h-6 rounded-full ${
+                                    index === 0 ? 'bg-yellow-400 text-yellow-900' : 
+                                    index === 1 ? 'bg-gray-400 text-gray-900' : 
+                                    index === 2 ? 'bg-amber-600 text-amber-900' : 
+                                    'bg-blue-500 text-white'
+                                } flex items-center justify-center text-xs font-bold shadow-lg">
+                                    ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-bold text-lg text-gray-900 dark:text-white">${player.name}</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                    <span>${player.position || 'Unknown'}</span>
+                                    ${player.age ? '• <span>' + player.age + 'y</span>' : ''}
+                                </div>
+                                <div class="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-3 mt-1">
+                                    <span class="flex items-center gap-1">⚽ ${player.goals || 0}</span>
+                                    <span class="flex items-center gap-1">🅰️ ${player.assists || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center gap-3">
+                                <div>
+                                    <div class="font-black text-2xl ${getWinPercentage(player) >= 70 ? 'text-green-600 dark:text-green-400' : getWinPercentage(player) >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}">
+                                        ${getWinPercentage(player)}%
+                                    </div>
+                                    <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                        <span class="text-green-600 dark:text-green-400">${player.wins || 0}W</span>
+                                        <span class="text-yellow-600 dark:text-yellow-400">${player.draws || 0}D</span>
+                                        <span class="text-red-500 dark:text-red-400">${player.losses || 0}L</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">${player.gamesPlayed || 0} game${(player.gamesPlayed || 0) !== 1 ? 's' : ''}</div>
+                                </div>
+                                <button onclick="showPlayerProfile('${player.name}')" class="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200" title="View Profile">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            
+            document.getElementById('topPlayers').innerHTML = topPlayersHTML;
+
+            // Update stats
+            document.getElementById('totalGames').textContent = games.length;
+            document.getElementById('totalPlayers').textContent = players.length;
+            
+            const avgGoals = games.length > 0 
+                ? (games.reduce((sum, game) => sum + game.score1 + game.score2, 0) / games.length).toFixed(1)
+                : '0';
+            document.getElementById('avgGoals').textContent = avgGoals;
+        }
+
+        // Global Search Functions
+        function performSearch() {
+            const searchTerm = document.getElementById('globalSearchInput').value.trim().toLowerCase();
+            const filter = document.getElementById('searchFilter').value;
+            const resultsContainer = document.getElementById('searchResults');
+            const resultsContent = document.getElementById('searchResultsContent');
+
+            if (!searchTerm) {
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+
+            let results = [];
+
+            // Search Players
+            if (filter === 'all' || filter === 'players') {
+                const playerResults = players.filter(player => 
+                    player.name.toLowerCase().includes(searchTerm) ||
+                    (player.position && player.position.toLowerCase().includes(searchTerm)) ||
+                    (player.age && player.age.toString().includes(searchTerm))
+                ).map(player => ({
+                    type: 'player',
+                    data: player,
+                    title: player.name,
+                    subtitle: `${player.position || 'Unknown Position'} ${player.age ? '• ' + player.age + 'y' : ''}`,
+                    extra: `⚽ ${player.goals || 0} goals • 🅰️ ${player.assists || 0} assists • ${getWinPercentage(player)}% win rate`
+                }));
+                results = results.concat(playerResults);
+            }
+
+            // Search Games
+            if (filter === 'all' || filter === 'games') {
+                const gameResults = games.filter(game => 
+                    (game.location && game.location.toLowerCase().includes(searchTerm)) ||
+                    (game.date && game.date.includes(searchTerm)) ||
+                    (game.team1 && game.team1.some(p => p.toLowerCase().includes(searchTerm))) ||
+                    (game.team2 && game.team2.some(p => p.toLowerCase().includes(searchTerm)))
+                ).map(game => ({
+                    type: 'game',
+                    data: game,
+                    title: `Game on ${formatDate(game.date)}`,
+                    subtitle: `${game.location || 'Unknown Location'} • Score: ${game.score1}-${game.score2}`,
+                    extra: `Team 1: ${game.team1?.join(', ') || 'N/A'} vs Team 2: ${game.team2?.join(', ') || 'N/A'}`
+                }));
+                results = results.concat(gameResults);
+            }
+
+            // Search Locations
+            if (filter === 'all' || filter === 'locations') {
+                const locationResults = [...new Set(games.map(game => game.location).filter(location => 
+                    location && location.toLowerCase().includes(searchTerm)
+                ))].map(location => {
+                    const gamesAtLocation = games.filter(game => game.location === location);
+                    return {
+                        type: 'location',
+                        data: { location, games: gamesAtLocation },
+                        title: `📍 ${location}`,
+                        subtitle: `${gamesAtLocation.length} game${gamesAtLocation.length !== 1 ? 's' : ''} played here`,
+                        extra: `Total goals: ${gamesAtLocation.reduce((sum, game) => sum + game.score1 + game.score2, 0)}`
+                    };
+                });
+                results = results.concat(locationResults);
+            }
+
+            // Display results
+            displaySearchResults(results, searchTerm);
+        }
+
+        function displaySearchResults(results, searchTerm) {
+            const resultsContainer = document.getElementById('searchResults');
+            const resultsContent = document.getElementById('searchResultsContent');
+
+            if (results.length === 0) {
+                resultsContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-gray-400 text-4xl mb-4">🔍</div>
+                        <p class="text-gray-600 dark:text-gray-400">No results found for "${searchTerm}"</p>
+                        <p class="text-gray-500 dark:text-gray-500 text-sm mt-2">Try different keywords or adjust your filter</p>
+                    </div>
+                `;
+            } else {
+                resultsContent.innerHTML = `
+                    <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                        Found ${results.length} result${results.length !== 1 ? 's' : ''} for "${searchTerm}"
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${results.map(result => `
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300 hover:shadow-lg cursor-pointer"
+                                 onclick="${getResultClickHandler(result)}">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold ${getResultIcon(result.type)}">
+                                        ${result.type === 'player' ? '👤' : result.type === 'game' ? '⚽' : '📍'}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-bold text-gray-900 dark:text-white truncate">${result.title}</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${result.subtitle}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">${result.extra}</p>
+                                    </div>
+                                    <div class="text-gray-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            resultsContainer.classList.remove('hidden');
+        }
+
+        function getResultIcon(type) {
+            switch (type) {
+                case 'player':
+                    return 'bg-gradient-to-br from-blue-500 to-indigo-600';
+                case 'game':
+                    return 'bg-gradient-to-br from-green-500 to-emerald-600';
+                case 'location':
+                    return 'bg-gradient-to-br from-purple-500 to-pink-600';
+                default:
+                    return 'bg-gradient-to-br from-gray-500 to-gray-600';
+            }
+        }
+
+        function getResultClickHandler(result) {
+            switch (result.type) {
+                case 'player':
+                    return `showPlayerProfile('${result.data.name}')`;
+                case 'game':
+                    return `showGameDetails('${result.data.id || result.data.date}')`;
+                case 'location':
+                    return `showLocationDetails('${result.data.location}')`;
+                default:
+                    return '';
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown Date';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+            } catch {
+                return dateString;
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('globalSearchInput').value = '';
+            document.getElementById('searchFilter').value = 'all';
+            document.getElementById('searchResults').classList.add('hidden');
+        }
+
+        function showGameDetails(gameId) {
+            const game = games.find(g => g.id === gameId || g.date === gameId);
+            if (!game) return;
+
+            alert(`Game Details:\n\nDate: ${formatDate(game.date)}\nLocation: ${game.location || 'Unknown'}\nScore: ${game.score1} - ${game.score2}\n\nTeam 1: ${game.team1?.join(', ') || 'N/A'}\nTeam 2: ${game.team2?.join(', ') || 'N/A'}`);
+        }
+
+        function showLocationDetails(location) {
+            const gamesAtLocation = games.filter(game => game.location === location);
+            const totalGoals = gamesAtLocation.reduce((sum, game) => sum + game.score1 + game.score2, 0);
+            
+            alert(`Location: ${location}\n\nGames played: ${gamesAtLocation.length}\nTotal goals scored: ${totalGoals}\nAverage goals per game: ${gamesAtLocation.length > 0 ? (totalGoals / gamesAtLocation.length).toFixed(1) : 0}`);
+        }
+
+        // Add search on Enter key press
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('globalSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        performSearch();
+                    }
+                });
+            }
+        });
+
+        // Helper function for win percentage (if not already defined)
+        function getWinPercentage(player) {
+            const totalGames = (player.wins || 0) + (player.draws || 0) + (player.losses || 0);
+            if (totalGames === 0) return 0;
+            return Math.round(((player.wins || 0) / totalGames) * 100);
+        }
+
+        // Placeholder functions for missing features
+        function showLogin() { 
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginModal').classList.add('flex');
+        }
+        
+        function hideLogin() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('flex');
+            document.getElementById('loginForm').reset();
+        }
+
+        async function login() {
+            console.log('=== LOGIN ATTEMPT START ===');
+            console.log('firebaseInitialized:', window.firebaseInitialized);
+            console.log('window.firebase:', window.firebase);
+            
+            const email = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            console.log('Email:', email);
+            console.log('Password length:', password.length);
+
+            if (!email || !password) {
+                alert('Please enter both email and password');
+                return;
+            }
+
+            if (password.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
+            if (!window.firebase || !window.firebase.auth) {
+                alert('Firebase not initialized. Please refresh the page.');
+                console.error('Firebase not available');
+                return;
+            }
+
+            try {
+                console.log('Attempting Firebase sign in...');
+                // Try to sign in first
+                const userCredential = await window.firebase.signInWithEmailAndPassword(window.firebase.auth, email, password);
+                console.log('✅ Logged in successfully:', userCredential.user.email);
+                console.log('User object:', userCredential.user);
+                hideLogin();
+                console.log('Login modal hidden');
+            } catch (error) {
+                console.error('❌ Login error:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                
+                // If user not found or invalid credentials, offer to create account
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
+                    if (confirm('Account not found. Create new account with this email?')) {
+                        await createAccount();
+                    }
+                } else if (error.code === 'auth/wrong-password') {
+                    alert('Incorrect password');
+                } else {
+                    alert('Login failed: ' + error.message);
+                }
+            }
+            console.log('=== LOGIN ATTEMPT END ===');
+        }
+
+        async function createAccount() {
+            const email = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (password.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
+            try {
+                const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, email, password);
+                console.log('Account created:', userCredential.user.email);
+                
+                // Check if user document already exists in Firestore
+                const usersQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'users')
+                );
+                const snapshot = await window.firebase.getDocs(usersQuery);
+                
+                let existingUser = null;
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.email === email) {
+                        existingUser = data;
+                    }
+                });
+                
+                // Only create new user document if it doesn't exist
+                if (!existingUser) {
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'users'),
+                        {
+                            email: email,
+                            isAdmin: false,
+                            createdAt: window.firebase.serverTimestamp()
+                        }
+                    );
+                    console.log('Created new user document in Firestore');
+                } else {
+                    console.log('User document already exists in Firestore - using existing');
+                }
+                
+                alert('Account created successfully! You are now logged in.');
+                hideLogin();
+            } catch (error) {
+                console.error('Account creation error:', error);
+                alert('Failed to create account: ' + error.message);
+            }
+        }
+
+        async function logout() {
+            console.log('🚪 Logout initiated...');
+            
+            if (!window.firebaseInitialized || !window.firebase) {
+                console.log('No Firebase - clearing local user only');
+                currentUser = null;
+                saveToLocalStorage();
+                updateUIForUser();
+                return;
+            }
+
+            try {
+                console.log('Signing out from Firebase...');
+                await window.firebase.signOut(window.firebase.auth);
+                currentUser = null;
+                games = [];
+                players = [];
+                saveToLocalStorage();
+                updateUIForUser();
+                updateDisplay();
+                console.log('✅ Logged out successfully');
+            } catch (error) {
+                console.error('❌ Logout error:', error);
+                alert('Logout failed: ' + error.message);
+            }
+        }
+
+        function updateUIForUser() {
+            const userInfo = document.getElementById('userInfo');
+            const loginBtn = document.getElementById('loginBtn');
+            const adminControls = document.getElementById('adminControls');
+
+            if (currentUser) {
+                const linkedPlayer = currentUser.linkedPlayer ? players.find(p => p.id === currentUser.linkedPlayer) : null;
+                let profileImageHTML = '';
+                let clickableClass = '';
+                let clickHandler = '';
+                let displayName = currentUser.email;
+                let userRole = currentUser.isAdmin ? 'Administrator' : 'User';
+                
+                // If user has a linked player profile
+                if (linkedPlayer) {
+                    displayName = linkedPlayer.name;
+                    userRole = currentUser.isAdmin ? 'Admin Player' : 'Player';
+                    
+                    if (linkedPlayer.profilePicture) {
+                        profileImageHTML = `<img src="${linkedPlayer.profilePicture}" alt="${linkedPlayer.name}" class="w-10 h-10 rounded-full object-cover shadow-lg border-2 border-white dark:border-gray-700">`;
+                    } else {
+                        profileImageHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-lg border-2 border-white dark:border-gray-700">${linkedPlayer.name.charAt(0).toUpperCase()}</div>`;
+                    }
+                    clickableClass = 'cursor-pointer hover:scale-105 transition-transform duration-200';
+                    clickHandler = `onclick="showPlayerProfile('${linkedPlayer.id}')" title="View my player profile"`;
+                } else {
+                    // Regular user without linked player
+                    profileImageHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">${currentUser.isAdmin ? '👑' : '👤'}</div>`;
+                }
+                
+                userInfo.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="${clickableClass}" ${clickHandler}>
+                            ${profileImageHTML}
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-semibold text-gray-900 dark:text-white">${displayName}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">${userRole}</span>
+                        </div>
+                        <button onclick="logout()" class="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors">Logout</button>
+                    </div>
+                `;
+                
+                loginBtn.classList.add('hidden');
+                
+                if (currentUser.isAdmin) {
+                    adminControls.classList.remove('hidden');
+                } else {
+                    adminControls.classList.add('hidden');
+                }
+            } else {
+                userInfo.innerHTML = '';
+                loginBtn.classList.remove('hidden');
+                adminControls.classList.add('hidden');
+            }
+        }
+
+        function showAddGameModal() { 
+            if (!currentUser) {
+                alert('Please login to add games');
+                showLogin();
+                return;
+            }
+            
+            if (!currentUser.isAdmin) {
+                alert('Only administrators can add games');
+                return;
+            }
+            
+            document.getElementById('gameModal').classList.remove('hidden');
+            document.getElementById('gameModal').classList.add('flex');
+            document.getElementById('gameDate').value = new Date().toISOString().split('T')[0];
+            
+            // Initialize team selections and player dropdowns
+            initializeGameModal();
+        }
+
+        let selectedTeam1Players = [];
+        let selectedTeam2Players = [];
+
+        function initializeGameModal() {
+            selectedTeam1Players = [];
+            selectedTeam2Players = [];
+            
+            // Populate player dropdowns
+            populatePlayerDropdowns();
+            
+            // Clear team selections
+            updateTeamDisplay('team1');
+            updateTeamDisplay('team2');
+            
+            // Hide goal tracking initially
+            document.getElementById('goalTrackingSection').classList.add('hidden');
+        }
+
+        function populatePlayerDropdowns() {
+            const team1Select = document.getElementById('team1PlayerSelect');
+            const team2Select = document.getElementById('team2PlayerSelect');
+            
+            // Clear existing options except first
+            team1Select.innerHTML = '<option value="">Select a player to add...</option>';
+            team2Select.innerHTML = '<option value="">Select a player to add...</option>';
+            
+            // Add all players to both dropdowns
+            players.forEach(player => {
+                const option1 = document.createElement('option');
+                option1.value = player.name;
+                option1.textContent = `${player.name} (${player.position || 'No position'})`;
+                team1Select.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = player.name;
+                option2.textContent = `${player.name} (${player.position || 'No position'})`;
+                team2Select.appendChild(option2);
+            });
+            
+            // Add event listeners for team selection
+            team1Select.addEventListener('change', () => addPlayerToTeam('team1'));
+            team2Select.addEventListener('change', () => addPlayerToTeam('team2'));
+        }
+
+        function addPlayerToTeam(team) {
+            const select = document.getElementById(`${team}PlayerSelect`);
+            const playerName = select.value;
+            
+            if (!playerName) return;
+            
+            const selectedPlayers = team === 'team1' ? selectedTeam1Players : selectedTeam2Players;
+            const otherTeamPlayers = team === 'team1' ? selectedTeam2Players : selectedTeam1Players;
+            
+            // Check if player is already in this team
+            if (selectedPlayers.includes(playerName)) {
+                alert(`${playerName} is already in ${team === 'team1' ? 'Team 1' : 'Team 2'}!`);
+                select.value = '';
+                return;
+            }
+            
+            // Check if player is in the other team
+            if (otherTeamPlayers.includes(playerName)) {
+                alert(`${playerName} is already in ${team === 'team1' ? 'Team 2' : 'Team 1'}!`);
+                select.value = '';
+                return;
+            }
+            
+            // Add player to team
+            selectedPlayers.push(playerName);
+            updateTeamDisplay(team);
+            select.value = '';
+            
+            // Update goal inputs if scores are set
+            updateGoalInputs();
+        }
+
+        function removePlayerFromTeam(team, playerName) {
+            const selectedPlayers = team === 'team1' ? selectedTeam1Players : selectedTeam2Players;
+            const index = selectedPlayers.indexOf(playerName);
+            
+            if (index > -1) {
+                selectedPlayers.splice(index, 1);
+                updateTeamDisplay(team);
+                updateGoalInputs();
+            }
+        }
+
+        function updateTeamDisplay(team) {
+            const container = document.getElementById(`${team}SelectedPlayers`);
+            const placeholder = document.getElementById(`${team}Placeholder`);
+            const selectedPlayers = team === 'team1' ? selectedTeam1Players : selectedTeam2Players;
+            
+            if (selectedPlayers.length === 0) {
+                container.innerHTML = `<span class="text-sm text-gray-500 dark:text-gray-400" id="${team}Placeholder">No players selected</span>`;
+            } else {
+                container.innerHTML = selectedPlayers.map(playerName => `
+                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
+                        ${playerName}
+                        <button type="button" onclick="removePlayerFromTeam('${team}', '${playerName}')" class="ml-1 text-blue-600 dark:text-blue-300 hover:text-red-600 dark:hover:text-red-400 font-bold">×</button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        function updateGoalInputs() {
+            const score1 = parseInt(document.getElementById('score1').value) || 0;
+            const score2 = parseInt(document.getElementById('score2').value) || 0;
+            const totalGoals = score1 + score2;
+            
+            const goalSection = document.getElementById('goalTrackingSection');
+            
+            if (totalGoals > 0 && (selectedTeam1Players.length > 0 || selectedTeam2Players.length > 0)) {
+                goalSection.classList.remove('hidden');
+                generatePlayerStatsInputs();
+            } else {
+                goalSection.classList.add('hidden');
+            }
+        }
+
+        function generatePlayerStatsInputs() {
+            // Generate Team 1 player stats inputs
+            generateTeamPlayerStats('team1', selectedTeam1Players);
+            
+            // Generate Team 2 player stats inputs
+            generateTeamPlayerStats('team2', selectedTeam2Players);
+        }
+
+        function generateTeamPlayerStats(team, players) {
+            const container = document.getElementById(`${team}PlayerStats`);
+            
+            if (players.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 col-span-full">No players selected for this team</p>';
+                return;
+            }
+            
+            const html = players.map(playerName => `
+                <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div class="font-medium text-sm text-gray-900 dark:text-white mb-2">${playerName}</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Goals</label>
+                            <input type="number" 
+                                   id="${team}_${playerName.replace(/\s+/g, '_')}_goals" 
+                                   min="0" 
+                                   value="0" 
+                                   class="w-full p-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Assists</label>
+                            <input type="number" 
+                                   id="${team}_${playerName.replace(/\s+/g, '_')}_assists" 
+                                   min="0" 
+                                   value="0" 
+                                   class="w-full p-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function hideAddGameModal() {
+            document.getElementById('gameModal').classList.add('hidden');
+            document.getElementById('gameModal').classList.remove('flex');
+            document.getElementById('gameForm').reset();
+            
+            // Reset team selections
+            selectedTeam1Players = [];
+            selectedTeam2Players = [];
+            updateTeamDisplay('team1');
+            updateTeamDisplay('team2');
+            
+            // Hide goal tracking
+            document.getElementById('goalTrackingSection').classList.add('hidden');
+        }
+
+        function showAddPlayerModal() { 
+            if (!currentUser?.isAdmin) {
+                alert('Only administrators can add players');
+                return;
+            }
+            document.getElementById('playerModal').classList.remove('hidden');
+            document.getElementById('playerModal').classList.add('flex');
+        }
+
+        function hideAddPlayerModal() {
+            document.getElementById('playerModal').classList.add('hidden');
+            document.getElementById('playerModal').classList.remove('flex');
+            document.getElementById('playerForm').reset();
+            
+            // Hide stats fields when closing modal
+            document.getElementById('playerStatsFields').classList.add('hidden');
+            document.getElementById('playerStatsFields').classList.remove('grid');
+            
+            // Reset modal to "Add Player" state if it was in edit mode
+            if (currentEditingPlayer) {
+                const modalTitle = document.querySelector('#playerModal h3');
+                modalTitle.innerHTML = '<span class="text-white text-xl">👤</span> Add New Player';
+                
+                const updateButton = document.querySelector('#playerModal button[onclick="updatePlayer()"]');
+                if (updateButton) {
+                    updateButton.innerHTML = '👤 Add Player';
+                    updateButton.setAttribute('onclick', 'addPlayer()');
+                }
+                
+                currentEditingPlayer = null;
+            }
+        }
+
+        function showPlayersModal() { 
+            if (!currentUser?.isAdmin) {
+                alert('Only administrators can manage players');
+                return;
+            }
+            
+            document.getElementById('playersModal').classList.remove('hidden');
+            document.getElementById('playersModal').classList.add('flex');
+            populatePlayersTable();
+        }
+
+        function addGame() {
+            const date = document.getElementById('gameDate').value;
+            const score1 = parseInt(document.getElementById('score1').value);
+            const score2 = parseInt(document.getElementById('score2').value);
+            const location = document.getElementById('location').value.trim() || 'Unknown';
+
+            if (!date || isNaN(score1) || isNaN(score2)) {
+                alert('Please fill all required fields');
+                return;
+            }
+
+            if (selectedTeam1Players.length === 0 || selectedTeam2Players.length === 0) {
+                alert('Please select players for both teams');
+                return;
+            }
+
+            // Collect player stats from the new input format
+            const playerStats = {};
+            
+            // Get stats for Team 1 players
+            selectedTeam1Players.forEach(playerName => {
+                const playerId = playerName.replace(/\s+/g, '_');
+                const goalsInput = document.getElementById(`team1_${playerId}_goals`);
+                const assistsInput = document.getElementById(`team1_${playerId}_assists`);
+                
+                playerStats[playerName] = {
+                    team: 1,
+                    goals: goalsInput ? parseInt(goalsInput.value) || 0 : 0,
+                    assists: assistsInput ? parseInt(assistsInput.value) || 0 : 0
+                };
+            });
+
+            // Get stats for Team 2 players
+            selectedTeam2Players.forEach(playerName => {
+                const playerId = playerName.replace(/\s+/g, '_');
+                const goalsInput = document.getElementById(`team2_${playerId}_goals`);
+                const assistsInput = document.getElementById(`team2_${playerId}_assists`);
+                
+                playerStats[playerName] = {
+                    team: 2,
+                    goals: goalsInput ? parseInt(goalsInput.value) || 0 : 0,
+                    assists: assistsInput ? parseInt(assistsInput.value) || 0 : 0
+                };
+            });
+
+            // Validate that total goals match the scores
+            const totalTeam1Goals = Object.values(playerStats)
+                .filter(stats => stats.team === 1)
+                .reduce((sum, stats) => sum + stats.goals, 0);
+            
+            const totalTeam2Goals = Object.values(playerStats)
+                .filter(stats => stats.team === 2)
+                .reduce((sum, stats) => sum + stats.goals, 0);
+
+            if (totalTeam1Goals !== score1) {
+                alert(`Team 1 individual goals (${totalTeam1Goals}) don't match team score (${score1}). Please adjust player goals.`);
+                return;
+            }
+
+            if (totalTeam2Goals !== score2) {
+                alert(`Team 2 individual goals (${totalTeam2Goals}) don't match team score (${score2}). Please adjust player goals.`);
+                return;
+            }
+
+            const game = {
+                id: Date.now().toString(),
+                date,
+                team1: [...selectedTeam1Players],
+                team2: [...selectedTeam2Players],
+                score1,
+                score2,
+                location,
+                playerStats,
+                addedBy: currentUser.username,
+                addedAt: new Date().toISOString()
+            };
+
+            // Use Firebase service to add game
+            FirebaseService.addGame(game);
+            
+            // Update player statistics
+            updatePlayerStats(game);
+            
+            saveToLocalStorage();
+            updateDisplay();
+            hideAddGameModal();
+            alert('Game added successfully!');
+        }
+
+        function addPlayer() {
+            const name = document.getElementById('playerName').value.trim();
+            const position = document.getElementById('playerPosition').value.trim();
+            const age = document.getElementById('playerAge').value.trim();
+            const email = document.getElementById('playerEmail').value.trim();
+
+            if (!name) {
+                alert('Player name is required');
+                return;
+            }
+
+            if (!position) {
+                alert('Position is required');
+                return;
+            }
+
+            if (players.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+                alert('Player already exists');
+                return;
+            }
+            
+            // Check if email is already linked to another player
+            if (email && players.find(p => p.email && p.email.toLowerCase() === email.toLowerCase())) {
+                alert('This email is already linked to another player');
+                return;
+            }
+
+            const newPlayer = {
+                id: Date.now() + Math.random(),
+                name: name,
+                position: position,
+                age: age ? parseInt(age) : null,
+                email: email || null,
+                gamesPlayed: 0,
+                wins: 0,
+                draws: 0,
+                losses: 0,
+                goals: 0,
+                assists: 0,
+                createdAt: new Date().toISOString(),
+                createdBy: currentUser.username
+            };
+
+            // Add to players array
+            players.push(newPlayer);
+
+            // Use Firebase service to add player (this handles both Firebase and localStorage)
+            FirebaseService.addPlayer(newPlayer);
+            
+            saveToLocalStorage();
+            updateDisplay();
+            hideAddPlayerModal();
+            
+            // Refresh players table if the manage players modal is open
+            const playersModalVisible = !document.getElementById('playersModal').classList.contains('hidden');
+            if (playersModalVisible) {
+                populatePlayersTable();
+            }
+            
+            alert(`Player ${name} added successfully as ${position}!`);
+        }
+
+        function hidePlayersModal() {
+            document.getElementById('playersModal').classList.add('hidden');
+            document.getElementById('playersModal').classList.remove('flex');
+        }
+
+        function populatePlayersTable() {
+            const playersTable = document.getElementById('playersTable');
+            
+            if (players.length === 0) {
+                playersTable.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 col-span-full">No players found.</p>';
+                return;
+            }
+
+            const playersHTML = players.map(player => {
+                const winRate = getWinPercentage(player);
+                const goalsPerGame = player.gamesPlayed > 0 ? (player.goals / player.gamesPlayed).toFixed(1) : '0.0';
+                
+                return `
+                    <div class="bg-white dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-100 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-md transform hover:-translate-y-0.5">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="text-lg font-bold text-gray-900 dark:text-white">${player.name}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">${player.position || 'Unknown'}</p>
+                                ${player.age ? `<p class="text-xs text-gray-500">${player.age} years old</p>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
+                                    ${winRate}%
+                                </div>
+                                <div class="text-xs text-gray-500">Win Rate</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-4 gap-2 text-center mb-3">
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-green-600 dark:text-green-400">⚽${player.goals || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Goals</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-purple-600 dark:text-purple-400">🅰️${player.assists || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Assists</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-orange-600 dark:text-orange-400">${goalsPerGame}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">G/Game</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div class="text-xs text-gray-400 dark:text-gray-500">
+                                <div class="mb-1">
+                                    <span class="text-green-600 dark:text-green-400">${player.wins}W</span> • 
+                                    <span class="text-yellow-600 dark:text-yellow-400">${player.draws}D</span> • 
+                                    <span class="text-red-500 dark:text-red-400">${player.losses}L</span>
+                                </div>
+                                <div class="truncate max-w-32">Created: ${new Date(player.createdAt).toLocaleDateString()}</div>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="editPlayer('${player.id}')" class="px-2 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded font-medium transition-all duration-200 transform hover:scale-105">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="deletePlayer('${player.id}')" class="px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded font-medium transition-all duration-200 transform hover:scale-105">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            playersTable.innerHTML = playersHTML;
+        }
+
+        function editPlayer(playerId) {
+            const player = players.find(p => p.id == playerId);
+            if (!player) {
+                alert('Player not found!');
+                return;
+            }
+
+            currentEditingPlayer = player;
+            
+            // Populate the form with current player data
+            document.getElementById('playerName').value = player.name;
+            document.getElementById('playerPosition').value = player.position || '';
+            document.getElementById('playerAge').value = player.age || '';
+            document.getElementById('playerEmail').value = player.email || '';
+            document.getElementById('playerGoals').value = player.goals || 0;
+            document.getElementById('playerAssists').value = player.assists || 0;
+            
+            // Show stats fields for editing
+            document.getElementById('playerStatsFields').classList.remove('hidden');
+            document.getElementById('playerStatsFields').classList.add('grid');
+            
+            // Change modal title and button text
+            const modalTitle = document.querySelector('#playerModal h3');
+            modalTitle.innerHTML = '<span class="text-white text-xl">✏️</span> Edit Player';
+            
+            const addButton = document.querySelector('#playerModal button[onclick="addPlayer()"]');
+            addButton.innerHTML = '✏️ Update Player';
+            addButton.setAttribute('onclick', 'updatePlayer()');
+            
+            showAddPlayerModal();
+        }
+
+        async function updatePlayer() {
+            if (!currentEditingPlayer) {
+                alert('No player selected for editing');
+                return;
+            }
+
+            const name = document.getElementById('playerName').value.trim();
+            const position = document.getElementById('playerPosition').value.trim();
+            const age = document.getElementById('playerAge').value.trim();
+            const email = document.getElementById('playerEmail').value.trim();
+            const goals = parseInt(document.getElementById('playerGoals').value) || 0;
+            const assists = parseInt(document.getElementById('playerAssists').value) || 0;
+
+            if (!name) {
+                alert('Player name is required');
+                return;
+            }
+
+            if (!position) {
+                alert('Position is required');
+                return;
+            }
+
+            // Check if name already exists for other players
+            const existingPlayer = players.find(p => p.name.toLowerCase() === name.toLowerCase() && p.id !== currentEditingPlayer.id);
+            if (existingPlayer) {
+                alert('Another player with this name already exists');
+                return;
+            }
+            
+            // Check if email is already linked to another player
+            if (email && players.find(p => p.email && p.email.toLowerCase() === email.toLowerCase() && p.id !== currentEditingPlayer.id)) {
+                alert('This email is already linked to another player');
+                return;
+            }
+
+            // Update all editable fields
+            currentEditingPlayer.name = name;
+            currentEditingPlayer.position = position;
+            currentEditingPlayer.age = age ? parseInt(age) : null;
+            currentEditingPlayer.email = email || null;
+            currentEditingPlayer.goals = goals;
+            currentEditingPlayer.assists = assists;
+            // Add update tracking
+            currentEditingPlayer.lastUpdatedAt = new Date().toISOString();
+            currentEditingPlayer.lastUpdatedBy = currentUser.username;
+            
+            console.log('Updating player with email:', email);
+            console.log('Current player object:', currentEditingPlayer);
+
+            // Update the player in the local players array
+            const playerIndex = players.findIndex(p => p.id === currentEditingPlayer.id);
+            if (playerIndex > -1) {
+                players[playerIndex] = currentEditingPlayer;
+                console.log('Updated local players array');
+            }
+
+            // Use Firebase service to update player (this handles both Firebase and localStorage)
+            await FirebaseService.updatePlayer(currentEditingPlayer);
+            
+            saveToLocalStorage();
+            updateDisplay();
+            
+            // Reset modal for next use BEFORE hiding it
+            const modalTitle = document.querySelector('#playerModal h3');
+            if (modalTitle) {
+                modalTitle.innerHTML = '<span class="text-white text-xl">👤</span> Add New Player';
+            }
+            
+            const updateButton = document.querySelector('#playerModal button[onclick="updatePlayer()"]');
+            if (updateButton) {
+                updateButton.innerHTML = '👤 Add Player';
+                updateButton.setAttribute('onclick', 'addPlayer()');
+            }
+            
+            currentEditingPlayer = null;
+            
+            hideAddPlayerModal();
+            populatePlayersTable(); // Refresh the players table
+            
+            alert(`Player ${name} updated successfully!`);
+        }
+
+        function deletePlayer(playerId) {
+            const player = players.find(p => p.id == playerId);
+            if (!player) {
+                alert('Player not found!');
+                return;
+            }
+
+            const confirmDelete = confirm(`Are you sure you want to delete player "${player.name}"?\n\nThis will also remove all their game statistics.\n\nThis action cannot be undone.`);
+            
+            if (confirmDelete) {
+                // Remove player from array
+                const playerIndex = players.findIndex(p => p.id == playerId);
+                if (playerIndex > -1) {
+                    players.splice(playerIndex, 1);
+                    
+                    saveToLocalStorage();
+                    updateDisplay();
+                    populatePlayersTable(); // Refresh the players table
+                    alert(`Player "${player.name}" has been deleted successfully.`);
+                }
+            }
+        }
+
+        function filterAndSearchPlayers() {
+            const searchTerm = document.getElementById('playerSearch').value.toLowerCase();
+            const positionFilter = document.getElementById('positionFilter').value;
+            
+            let filteredPlayers = players;
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredPlayers = filteredPlayers.filter(player => 
+                    player.name.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Apply position filter
+            if (positionFilter) {
+                filteredPlayers = filteredPlayers.filter(player => 
+                    player.position === positionFilter
+                );
+            }
+            
+            // Update the display with filtered players
+            const playersTable = document.getElementById('playersTable');
+            
+            if (filteredPlayers.length === 0) {
+                playersTable.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 col-span-full">No players found matching your search.</p>';
+                return;
+            }
+
+            const playersHTML = filteredPlayers.map(player => {
+                const winRate = getWinPercentage(player);
+                const goalsPerGame = player.gamesPlayed > 0 ? (player.goals / player.gamesPlayed).toFixed(1) : '0.0';
+                
+                return `
+                    <div class="bg-white dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-100 dark:border-gray-600 hover:border-blue-200 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-md transform hover:-translate-y-0.5">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="text-lg font-bold text-gray-900 dark:text-white">${player.name}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">${player.position || 'Unknown'}</p>
+                                ${player.age ? `<p class="text-xs text-gray-500">${player.age} years old</p>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
+                                    ${winRate}%
+                                </div>
+                                <div class="text-xs text-gray-500">Win Rate</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-4 gap-2 text-center mb-3">
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-green-600 dark:text-green-400">⚽${player.goals || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Goals</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-purple-600 dark:text-purple-400">🅰️${player.assists || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Assists</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded p-2">
+                                <div class="text-sm font-bold text-orange-600 dark:text-orange-400">${goalsPerGame}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">G/Game</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div class="text-xs text-gray-400 dark:text-gray-500">
+                                <div class="mb-1">
+                                    <span class="text-green-600 dark:text-green-400">${player.wins}W</span> • 
+                                    <span class="text-yellow-600 dark:text-yellow-400">${player.draws}D</span> • 
+                                    <span class="text-red-500 dark:text-red-400">${player.losses}L</span>
+                                </div>
+                                <div class="truncate max-w-32">Created: ${new Date(player.createdAt).toLocaleDateString()}</div>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="editPlayer('${player.id}')" class="px-2 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded font-medium transition-all duration-200 transform hover:scale-105">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="deletePlayer('${player.id}')" class="px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded font-medium transition-all duration-200 transform hover:scale-105">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            playersTable.innerHTML = playersHTML;
+        }
+
+        function updatePlayerStats(game) {
+            const allPlayers = [...game.team1, ...game.team2];
+            
+            allPlayers.forEach(playerName => {
+                let player = players.find(p => p.name === playerName);
+                if (!player) {
+                    // Auto-create player if not exists
+                    player = {
+                        id: Date.now() + Math.random(),
+                        name: playerName,
+                        position: 'Unknown',
+                        age: null,
+                        gamesPlayed: 0,
+                        wins: 0,
+                        draws: 0,
+                        losses: 0,
+                        goals: 0,
+                        assists: 0,
+                        createdAt: new Date().toISOString(),
+                        createdBy: 'auto-generated'
+                    };
+                    players.push(player);
+                    // Add new player to Firebase
+                    FirebaseService.addPlayer(player);
+                }
+
+                player.gamesPlayed++;
+                
+                // Update win/draw/loss
+                if (game.score1 === game.score2) {
+                    player.draws++;
+                } else if (
+                    (game.team1.includes(playerName) && game.score1 > game.score2) ||
+                    (game.team2.includes(playerName) && game.score2 > game.score1)
+                ) {
+                    player.wins++;
+                } else {
+                    player.losses++;
+                }
+
+                // Update goals and assists from the new playerStats format
+                if (game.playerStats && game.playerStats[playerName]) {
+                    const stats = game.playerStats[playerName];
+                    player.goals += stats.goals || 0;
+                    player.assists += stats.assists || 0;
+                }
+
+                // Add update tracking
+                player.lastUpdatedAt = new Date().toISOString();
+                player.lastUpdatedBy = 'auto-updated-from-game';
+
+                // Update player in Firebase
+                FirebaseService.updatePlayer(player);
+            });
+        }
+
+        function getWinPercentage(player) {
+            if (player.gamesPlayed === 0) return 0;
+            return Math.round((player.wins / player.gamesPlayed) * 100);
+        }
+
+        // Player Profile Functions
+        function showPlayerProfile(playerId) {
+            console.log('showPlayerProfile called with:', playerId, typeof playerId);
+            // Convert playerId to number if it's a string number
+            const numericId = typeof playerId === 'string' && !isNaN(playerId) ? parseFloat(playerId) : playerId;
+            const player = players.find(p => p.id === numericId || p.id === playerId || p.name === playerId);
+            console.log('Found player:', player);
+            if (!player) {
+                alert('Player not found');
+                return;
+            }
+
+            document.getElementById('profileModalTitle').textContent = `${player.name}'s Profile`;
+            
+            // Check if this is the current user's linked player profile
+            const isOwnProfile = currentUser && currentUser.linkedPlayer === player.id;
+            console.log('Is own profile?', isOwnProfile, 'currentUser.linkedPlayer:', currentUser?.linkedPlayer, 'player.id:', player.id);
+            
+            const profileHTML = `
+                <div class="space-y-6">
+                    <!-- Profile Picture Section -->
+                    <div class="text-center">
+                        <div class="w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-gray-300 dark:border-gray-600 shadow-xl mb-4">
+                            ${player.profilePicture 
+                                ? `<img src="${player.profilePicture}" alt="${player.name}" class="w-full h-full object-cover">`
+                                : `<div class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-4xl">${player.name.charAt(0).toUpperCase()}</div>`
+                            }
+                        </div>
+                        ${isOwnProfile ? `
+                            <div class="space-y-3">
+                                <input type="file" id="profilePictureInput" accept="image/*" class="hidden" onchange="handleProfilePictureUpload(event)">
+                                <button onclick="document.getElementById('profilePictureInput').click()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors">
+                                    📸 ${player.profilePicture ? 'Change Picture' : 'Add Picture'}
+                                </button>
+                                ${player.profilePicture ? `
+                                    <button onclick="removeProfilePicture()" class="ml-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm transition-colors">
+                                        🗑️ Remove
+                                    </button>
+                                ` : ''}
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-sm mx-auto">
+                                    📐 Images will be automatically cropped to square and compressed for optimal size
+                                </p>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Player Info -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                        <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Player Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name:</label>
+                                ${isOwnProfile ? `
+                                    <input type="text" id="profileName" value="${player.name}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                                ` : `
+                                    <div class="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm">${player.name}</div>
+                                `}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Position:</label>
+                                ${isOwnProfile ? `
+                                    <select id="profilePosition" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                                        <option value="">Select position...</option>
+                                        <option value="Goalkeeper" ${player.position === 'Goalkeeper' ? 'selected' : ''}>Goalkeeper (GK)</option>
+                                        <option value="Defender" ${player.position === 'Defender' ? 'selected' : ''}>Defender (DEF)</option>
+                                        <option value="Winger" ${player.position === 'Winger' ? 'selected' : ''}>Winger (WIN)</option>
+                                        <option value="Forward" ${player.position === 'Forward' ? 'selected' : ''}>Forward (FWD)</option>
+                                        <option value="Universal" ${player.position === 'Universal' ? 'selected' : ''}>Universal (ALL)</option>
+                                    </select>
+                                ` : `
+                                    <div class="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm">${player.position || 'Not specified'}</div>
+                                `}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Age:</label>
+                                ${isOwnProfile ? `
+                                    <input type="number" id="profileAge" value="${player.age || ''}" min="16" max="50" placeholder="Enter age" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                                ` : `
+                                    <div class="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm">${player.age || 'Not specified'}</div>
+                                `}
+                            </div>
+                            ${isOwnProfile ? `
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Set Password:</label>
+                                    <input type="password" id="profilePassword" placeholder="Set profile password" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional: protect your profile with a password</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Stats Section -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                        <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Statistics</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${player.gamesPlayed || 0}</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Games</div>
+                            </div>
+                            <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                <div class="text-2xl font-bold text-green-600 dark:text-green-400">${player.goals || 0}</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Goals</div>
+                            </div>
+                            <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">${player.assists || 0}</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Assists</div>
+                            </div>
+                            <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                                <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${getWinPercentage(player)}%</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Win Rate</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-center gap-6 text-sm">
+                            <span class="text-green-600 dark:text-green-400 font-medium">${player.wins || 0} Wins</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-medium">${player.draws || 0} Draws</span>
+                            <span class="text-red-500 dark:text-red-400 font-medium">${player.losses || 0} Losses</span>
+                        </div>
+                    </div>
+
+                    ${isOwnProfile ? `
+                        <div class="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <button onclick="hidePlayerProfile()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 text-sm">
+                                Cancel
+                            </button>
+                            <button onclick="savePlayerProfile()" class="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm">
+                                💾 Save Changes
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <button onclick="hidePlayerProfile()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 text-sm">
+                                Close
+                            </button>
+                        </div>
+                    `}
+                </div>
+            `;
+
+            document.getElementById('playerProfileContent').innerHTML = profileHTML;
+            document.getElementById('playerProfileModal').classList.remove('hidden');
+            document.getElementById('playerProfileModal').classList.add('flex');
+        }
+
+        function hidePlayerProfile() {
+            document.getElementById('playerProfileModal').classList.add('hidden');
+            document.getElementById('playerProfileModal').classList.remove('flex');
+        }
+
+        function showPlayerLogin() {
+            // Populate player dropdown
+            const playerSelect = document.getElementById('playerLoginSelect');
+            playerSelect.innerHTML = '<option value="">Select your name...</option>';
+            
+            players.forEach((player, index) => {
+                const option = document.createElement('option');
+                // Use the player's name as the value for consistency
+                option.value = player.name;
+                option.textContent = player.name;
+                playerSelect.appendChild(option);
+            });
+
+            document.getElementById('playerLoginModal').classList.remove('hidden');
+            document.getElementById('playerLoginModal').classList.add('flex');
+        }
+
+        function hidePlayerLogin() {
+            document.getElementById('playerLoginModal').classList.add('hidden');
+            document.getElementById('playerLoginModal').classList.remove('flex');
+            document.getElementById('playerLoginForm').reset();
+        }
+
+        function loginAsPlayer() {
+            const playerName = document.getElementById('playerLoginSelect').value;
+            const password = document.getElementById('playerPassword').value;
+
+            if (!playerName) {
+                alert('Please select your player name');
+                return;
+            }
+
+            const player = players.find(p => p.name === playerName);
+            if (!player) {
+                alert('Player not found');
+                return;
+            }
+
+            // Check password if player has one set
+            if (player.password && player.password !== password) {
+                alert('Incorrect password');
+                return;
+            }
+
+            // Set player as logged in
+            currentUser = {
+                ...currentUser,
+                playerId: player.name, // Always use name for consistency
+                playerName: player.name,
+                isPlayer: true
+            };
+            
+            saveToLocalStorage();
+            updateUIForUser();
+            hidePlayerLogin();
+            
+            alert(`Welcome, ${player.name}! You can now edit your profile.`);
+            showPlayerProfile(playerName);
+        }
+
+        function handleProfilePictureUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            // Load image into cropper
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                cropperImage = new Image();
+                cropperImage.onload = function() {
+                    showImageCropper();
+                };
+                cropperImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showImageCropper() {
+            const modal = document.getElementById('imageCropperModal');
+            const canvas = document.getElementById('cropperCanvas');
+            const ctx = canvas.getContext('2d');
+            const circle = document.getElementById('cropCircle');
+            
+            // Set canvas size to fit the image (max 600px width)
+            const maxWidth = 600;
+            const maxHeight = 500;
+            let displayWidth = cropperImage.width;
+            let displayHeight = cropperImage.height;
+            
+            // Scale down if needed
+            if (displayWidth > maxWidth) {
+                const scale = maxWidth / displayWidth;
+                displayWidth = maxWidth;
+                displayHeight = cropperImage.height * scale;
+            }
+            if (displayHeight > maxHeight) {
+                const scale = maxHeight / displayHeight;
+                displayHeight = maxHeight;
+                displayWidth = displayWidth * scale;
+            }
+            
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
+            
+            // Draw the image
+            ctx.drawImage(cropperImage, 0, 0, canvas.width, canvas.height);
+            
+            console.log('Canvas display size:', canvas.width, 'x', canvas.height);
+            console.log('Original image size:', cropperImage.width, 'x', cropperImage.height);
+            
+            // Fixed circle size - scale it based on canvas size
+            const circleDisplaySize = Math.min(300, canvas.width * 0.8, canvas.height * 0.8);
+            cropperState.size = circleDisplaySize;
+            cropperState.x = Math.max(0, (canvas.width - circleDisplaySize) / 2);
+            cropperState.y = Math.max(0, (canvas.height - circleDisplaySize) / 2);
+            
+            console.log('Circle initial position:', cropperState.x, cropperState.y, 'size:', cropperState.size);
+            
+            updateCropCircle();
+            
+            modal.classList.remove('hidden');
+            setupCropperEvents();
+        }
+
+        function updateCropCircle() {
+            const circle = document.getElementById('cropCircle');
+            const canvas = document.getElementById('cropperCanvas');
+            const container = document.getElementById('cropperContainer');
+            
+            circle.style.width = cropperState.size + 'px';
+            circle.style.height = cropperState.size + 'px';
+            circle.style.left = cropperState.x + 'px';
+            circle.style.top = cropperState.y + 'px';
+        }
+
+        function setupCropperEvents() {
+            const canvas = document.getElementById('cropperCanvas');
+            const circle = document.getElementById('cropCircle');
+            
+            // Handle dragging the circle (no resizing - fixed size)
+            circle.onmousedown = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                cropperState.isDragging = true;
+                cropperState.startX = e.clientX;
+                cropperState.startY = e.clientY;
+                cropperState.startPosX = cropperState.x;
+                cropperState.startPosY = cropperState.y;
+            };
+            
+            document.onmousemove = function(e) {
+                if (cropperState.isDragging) {
+                    const dx = e.clientX - cropperState.startX;
+                    const dy = e.clientY - cropperState.startY;
+                    
+                    cropperState.x = Math.max(0, Math.min(canvas.width - cropperState.size, cropperState.startPosX + dx));
+                    cropperState.y = Math.max(0, Math.min(canvas.height - cropperState.size, cropperState.startPosY + dy));
+                    
+                    updateCropCircle();
+                }
+            };
+            
+            document.onmouseup = function() {
+                cropperState.isDragging = false;
+            };
+        }
+
+        function closeImageCropper() {
+            const modal = document.getElementById('imageCropperModal');
+            modal.classList.add('hidden');
+            cropperImage = null;
+            document.onmousemove = null;
+            document.onmouseup = null;
+            
+            // Reset file input
+            const input = document.getElementById('profilePictureInput');
+            if (input) input.value = '';
+        }
+
+        function applyCrop() {
+            const canvas = document.getElementById('cropperCanvas');
+            const outputCanvas = document.createElement('canvas');
+            const ctx = outputCanvas.getContext('2d');
+            
+            // Set output size to 300x300
+            const outputSize = 300;
+            outputCanvas.width = outputSize;
+            outputCanvas.height = outputSize;
+            
+            // Get the scale factor - how much the canvas display differs from original image
+            const scaleX = cropperImage.width / canvas.width;
+            const scaleY = cropperImage.height / canvas.height;
+            
+            // Calculate crop area in original image coordinates
+            const cropX = cropperState.x * scaleX;
+            const cropY = cropperState.y * scaleY;
+            const cropWidth = cropperState.size * scaleX;
+            const cropHeight = cropperState.size * scaleY;
+            
+            console.log('Canvas size:', canvas.width, 'x', canvas.height);
+            console.log('Original image size:', cropperImage.width, 'x', cropperImage.height);
+            console.log('Circle position:', cropperState.x, cropperState.y, 'size:', cropperState.size);
+            console.log('Crop area in original:', cropX, cropY, cropWidth, cropHeight);
+            
+            // Draw circular clipped image
+            ctx.beginPath();
+            ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Draw the cropped portion from the original image
+            ctx.drawImage(
+                cropperImage,
+                cropX, cropY, cropWidth, cropHeight,
+                0, 0, outputSize, outputSize
+            );
+            
+            // Convert to base64
+            const compressedBase64 = outputCanvas.toDataURL('image/jpeg', 0.8);
+            
+            // Update player profile
+            const currentPlayerId = currentUser.linkedPlayer;
+            const player = players.find(p => p.id === currentPlayerId);
+            
+            if (player) {
+                player.profilePicture = compressedBase64;
+                FirebaseService.updatePlayer(player);
+                saveToLocalStorage();
+                updateDisplay();
+                updateUIForUser();
+                showPlayerProfile(currentPlayerId);
+                
+                closeImageCropper();
+                alert('Profile picture updated successfully! 📸');
+            }
+        }
+
+        // Function to compress and crop image
+        function compressAndCropImage(file, targetWidth, targetHeight, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+
+                img.onload = function() {
+                    // Set canvas size to target dimensions
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+
+                    // Calculate crop dimensions to maintain aspect ratio
+                    const sourceAspectRatio = img.width / img.height;
+                    const targetAspectRatio = targetWidth / targetHeight;
+
+                    let sourceX = 0, sourceY = 0, sourceWidth = img.width, sourceHeight = img.height;
+
+                    if (sourceAspectRatio > targetAspectRatio) {
+                        // Source is wider - crop width
+                        sourceWidth = img.height * targetAspectRatio;
+                        sourceX = (img.width - sourceWidth) / 2;
+                    } else {
+                        // Source is taller - crop height
+                        sourceHeight = img.width / targetAspectRatio;
+                        sourceY = (img.height - sourceHeight) / 2;
+                    }
+
+                    // Draw the cropped and resized image
+                    ctx.drawImage(
+                        img,
+                        sourceX, sourceY, sourceWidth, sourceHeight,  // Source crop
+                        0, 0, targetWidth, targetHeight               // Destination
+                    );
+
+                    // Convert to base64 with compression
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                    
+                    // Check final size (should be much smaller now)
+                    const sizeInBytes = Math.round((compressedBase64.length * 3) / 4);
+                    console.log(`Compressed image size: ${(sizeInBytes / 1024).toFixed(1)}KB`);
+                    
+                    resolve(compressedBase64);
+                };
+
+                img.onerror = function() {
+                    reject(new Error('Failed to load image'));
+                };
+
+                // Create object URL to load the image
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                };
+                reader.onerror = function() {
+                    reject(new Error('Failed to read file'));
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeProfilePicture() {
+            if (!confirm('Are you sure you want to remove your profile picture?')) {
+                return;
+            }
+
+            const currentPlayerName = currentUser.playerId; // This is now always a name
+            const player = players.find(p => p.name === currentPlayerName);
+            
+            if (player) {
+                delete player.profilePicture;
+                FirebaseService.updatePlayer(player);
+                saveToLocalStorage();
+                updateDisplay();
+                updateUIForUser(); // Refresh navigation area to remove profile picture
+                
+                // Refresh the profile modal
+                showPlayerProfile(currentPlayerName);
+                alert('Profile picture removed successfully!');
+            }
+        }
+
+        function savePlayerProfile() {
+            const currentPlayerName = currentUser.playerId; // This is now always a name
+            const player = players.find(p => p.name === currentPlayerName);
+            
+            if (!player) {
+                alert('Player not found');
+                return;
+            }
+
+            // Get updated values
+            const newName = document.getElementById('profileName').value.trim();
+            const newPosition = document.getElementById('profilePosition').value;
+            const newAge = document.getElementById('profileAge').value;
+            const newPassword = document.getElementById('profilePassword').value;
+
+            if (!newName) {
+                alert('Player name is required');
+                return;
+            }
+
+            // Check if name is already taken by another player
+            const existingPlayer = players.find(p => p.name.toLowerCase() === newName.toLowerCase() && p.name !== currentPlayerName);
+            if (existingPlayer) {
+                alert('A player with this name already exists');
+                return;
+            }
+
+            // Update player data
+            player.name = newName;
+            player.position = newPosition;
+            player.age = newAge ? parseInt(newAge) : null;
+            
+            if (newPassword) {
+                player.password = newPassword;
+            }
+
+            player.lastUpdatedAt = new Date().toISOString();
+            player.lastUpdatedBy = 'player-self-update';
+
+            // Update the currentUser.playerId if the name changed
+            if (currentPlayerName !== newName) {
+                currentUser.playerId = newName;
+                currentUser.playerName = newName;
+            }
+
+            // Update in Firebase and local storage
+            FirebaseService.updatePlayer(player);
+            saveToLocalStorage();
+            updateDisplay();
+            updateUIForUser(); // Refresh navigation area to reflect name changes
+            
+            hidePlayerProfile();
+            alert('Profile updated successfully!');
+        }
+
+        // Migration function to move localStorage data to Firebase
+        async function migrateLocalStorageToFirebase() {
+            if (!firebaseInitialized) {
+                alert('Please setup Firebase first before migrating data!');
+                return;
+            }
+
+            try {
+                console.log('Starting migration from localStorage to Firebase...');
+                
+                // Get data from localStorage (using footable prefix)
+                const localGames = JSON.parse(localStorage.getItem('footable-games') || '[]');
+                const localPlayers = JSON.parse(localStorage.getItem('footable-players') || '[]');
+                const localUsers = JSON.parse(localStorage.getItem('footable-users') || '[]');
+
+                console.log(`Found ${localGames.length} games, ${localPlayers.length} players, ${localUsers.length} users to migrate`);
+
+                if (localGames.length === 0 && localPlayers.length === 0 && localUsers.length === 0) {
+                    alert('No data found in localStorage to migrate.');
+                    return;
+                }
+
+                let migrated = { games: 0, players: 0, users: 0 };
+
+                // Migrate users first
+                for (const user of localUsers) {
+                    try {
+                        const userData = {
+                            username: user.username,
+                            password: user.password,
+                            isAdmin: user.isAdmin || false,
+                            originalId: user.id,
+                            migratedAt: new Date().toISOString(),
+                            migratedFrom: 'localStorage'
+                        };
+                        
+                        await window.firebase.addDoc(
+                            window.firebase.collection(window.firebase.db, 'users'), 
+                            userData
+                        );
+                        migrated.users++;
+                        console.log(`Migrated user: ${user.username}`);
+                    } catch (error) {
+                        console.error(`Failed to migrate user ${user.username}:`, error);
+                    }
+                }
+
+                // Migrate players
+                for (const player of localPlayers) {
+                    try {
+                        const playerData = {
+                            name: player.name,
+                            position: player.position || 'Unknown',
+                            age: player.age || null,
+                            gamesPlayed: player.gamesPlayed || 0,
+                            wins: player.wins || 0,
+                            draws: player.draws || 0,
+                            losses: player.losses || 0,
+                            goals: player.goals || 0,
+                            assists: player.assists || 0,
+                            createdBy: player.createdBy || 'migration',
+                            originalId: player.id,
+                            migratedAt: new Date().toISOString(),
+                            migratedFrom: 'localStorage'
+                        };
+                        
+                        await window.firebase.addDoc(
+                            window.firebase.collection(window.firebase.db, 'players'), 
+                            playerData
+                        );
+                        migrated.players++;
+                        console.log(`Migrated player: ${player.name}`);
+                    } catch (error) {
+                        console.error(`Failed to migrate player ${player.name}:`, error);
+                    }
+                }
+
+                // Migrate games
+                for (const game of localGames) {
+                    try {
+                        const gameData = {
+                            date: game.date,
+                            team1: game.team1 || [],
+                            team2: game.team2 || [],
+                            score1: game.score1 || 0,
+                            score2: game.score2 || 0,
+                            location: game.location || 'Unknown',
+                            team1Goals: game.team1Goals || [],
+                            team1Assists: game.team1Assists || [],
+                            team2Goals: game.team2Goals || [],
+                            team2Assists: game.team2Assists || [],
+                            addedBy: game.addedBy || 'migration',
+                            originalId: game.id,
+                            migratedAt: new Date().toISOString(),
+                            migratedFrom: 'localStorage'
+                        };
+                        
+                        await window.firebase.addDoc(
+                            window.firebase.collection(window.firebase.db, 'games'), 
+                            gameData
+                        );
+                        migrated.games++;
+                        console.log(`Migrated game from ${game.date}`);
+                    } catch (error) {
+                        console.error(`Failed to migrate game from ${game.date}:`, error);
+                    }
+                }
+
+                // Create backup of localStorage data
+                const backupData = {
+                    games: localGames,
+                    players: localPlayers,
+                    users: localUsers,
+                    migratedAt: new Date().toISOString()
+                };
+                localStorage.setItem('footable-backup', JSON.stringify(backupData));
+
+                alert(`Migration completed! ✅\nMigrated: ${migrated.games} games, ${migrated.players} players, ${migrated.users} users\n\nYour original data has been backed up in localStorage as 'footable-backup'.`);
+                
+                console.log('Migration completed successfully!', migrated);
+                return migrated;
+
+            } catch (error) {
+                console.error('Migration failed:', error);
+                alert(`Migration failed: ${error.message}\n\nCheck the browser console for details.`);
+                return null;
+            }
+        }
+
+        // Clear localStorage after successful migration
+        async function clearLocalStorageAfterMigration() {
+            if (confirm('Are you sure you want to clear localStorage? This will remove all local data (backup will remain).')) {
+                const keys = ['footable-games', 'footable-players', 'footable-users', 'footable-currentUser'];
+                keys.forEach(key => localStorage.removeItem(key));
+                alert('localStorage cleared! Your app now uses Firebase exclusively.');
+                location.reload(); // Refresh to load from Firebase
+            }
+        }
+
+        function inspectLocalStorage() {
+            console.log('=== localStorage Inspection ===');
+            console.log('Origin:', window.location.origin);
+            console.log('Protocol:', window.location.protocol);
+            console.log('Host:', window.location.host);
+            console.log();
+            
+            const keys = ['footable-games', 'footable-players', 'footable-users', 'footable-currentUser'];
+            keys.forEach(key => {
+                const value = localStorage.getItem(key);
+                console.log(`${key}:`, value ? JSON.parse(value) : 'null');
+            });
+            
+            console.log();
+            console.log('Current in-memory arrays:');
+            console.log('games:', games);
+            console.log('players:', players);
+            console.log('users:', users);
+            console.log('currentUser:', currentUser);
+            console.log('=== End Inspection ===');
+        }
+
+        async function initializeApp() {
+            console.log('Initializing FooTable app...');
+            
+            initializeTheme();
+            loadFromLocalStorage();
+            initializeDefaultUsers();
+            updateUIForUser();
+            updateDisplay();
+            
+            // Set connection status to green since Firebase is initialized
+            if (window.firebaseInitialized) {
+                updateConnectionStatus(true);
+            }
+
+            // Load public data (games and players) for everyone
+            console.log('Loading public data...');
+            FirebaseService.setupListeners();
+
+            // Setup auth listener if Firebase is initialized
+            console.log('About to setup auth listener...');
+            setupAuthListener();
+            
+            console.log('App initialization complete. firebaseInitialized =', window.firebaseInitialized);
+        }
+
+        function setupAuthListener() {
+            if (!window.firebaseInitialized || !window.firebase || !window.firebase.auth) {
+                console.log('Cannot setup auth listener - Firebase not initialized');
+                console.log('window.firebaseInitialized:', window.firebaseInitialized);
+                console.log('window.firebase:', window.firebase);
+                return;
+            }
+
+            console.log('✅ Setting up Firebase auth listener...');
+
+            window.firebase.onAuthStateChanged(window.firebase.auth, async (user) => {
+                console.log('🔔 Auth state changed! User:', user ? user.email : 'null');
+                
+                if (user) {
+                    console.log('✅ User logged in:', user.email);
+                    
+                    try {
+                        const usersQuery = window.firebase.query(
+                            window.firebase.collection(window.firebase.db, 'users')
+                        );
+                        const snapshot = await window.firebase.getDocs(usersQuery);
+                        
+                        let isAdmin = false;
+                        let userFound = false;
+                        
+                        snapshot.docs.forEach(doc => {
+                            const data = doc.data();
+                            if (data.email === user.email) {
+                                isAdmin = data.isAdmin || false;
+                                userFound = true;
+                                console.log('User document found in Firestore, isAdmin:', isAdmin);
+                            }
+                        });
+                        
+                        if (!userFound) {
+                            console.log('User not found in Firestore, creating user document...');
+                            // Create user document if it doesn't exist
+                            await window.firebase.addDoc(
+                                window.firebase.collection(window.firebase.db, 'users'),
+                                {
+                                    email: user.email,
+                                    isAdmin: false,
+                                    createdAt: window.firebase.serverTimestamp()
+                                }
+                            );
+                        }
+                        
+                        // Check if user has a linked player profile
+                        console.log('Checking for linked player. Email:', user.email);
+                        console.log('Available players:', players.length);
+                        console.log('Players with emails:', players.filter(p => p.email).map(p => ({ name: p.name, email: p.email })));
+                        
+                        const linkedPlayer = players.find(p => p.email && p.email.toLowerCase() === user.email.toLowerCase());
+                        
+                        currentUser = {
+                            id: user.uid,
+                            username: user.email,
+                            email: user.email,
+                            isAdmin: isAdmin,
+                            linkedPlayer: linkedPlayer ? linkedPlayer.id : null,
+                            playerName: linkedPlayer ? linkedPlayer.name : null
+                        };
+                        
+                        console.log('Current user set to:', currentUser);
+                        if (linkedPlayer) {
+                            console.log('✅ User linked to player profile:', linkedPlayer.name);
+                        } else {
+                            console.log('⚠️ No linked player found for:', user.email);
+                        }
+                        saveToLocalStorage();
+                        updateUIForUser();
+                        
+                        // Setup Firebase data listeners after login
+                        FirebaseService.setupListeners();
+                    } catch (error) {
+                        console.error('Error in auth state handler:', error);
+                        alert('Error loading user data: ' + error.message);
+                    }
+                } else {
+                    console.log('User logged out');
+                    currentUser = null;
+                    saveToLocalStorage();
+                    updateUIForUser();
+                }
+            });
+        }
+
+        // Initialize event listeners
+        function initializeEventListeners() {
+            // Close modals when clicking outside
+            document.getElementById('loginModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideLogin();
+                }
+            });
+
+            document.getElementById('gameModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideAddGameModal();
+                }
+            });
+
+            document.getElementById('playerModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideAddPlayerModal();
+                }
+            });
+
+            document.getElementById('playersModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hidePlayersModal();
+                }
+            });
+
+            // Allow Enter key to submit forms
+            const loginPasswordInput = document.getElementById('loginPassword');
+            if (loginPasswordInput) {
+                loginPasswordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        login();
+                    }
+                });
+            }
+
+            // Add search and filter functionality for players
+            const playerSearchInput = document.getElementById('playerSearch');
+            const positionFilterSelect = document.getElementById('positionFilter');
+            
+            if (playerSearchInput) {
+                playerSearchInput.addEventListener('input', filterAndSearchPlayers);
+            }
+            
+            if (positionFilterSelect) {
+                positionFilterSelect.addEventListener('change', filterAndSearchPlayers);
+            }
+        }
+
+        // Start the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            initializeEventListeners();
+        });
+    </script>
 </body>
 </html>
