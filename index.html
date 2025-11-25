@@ -40,7 +40,7 @@
     <script type="module">
         // Import Firebase modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         
         const firebaseConfig = {
@@ -56,7 +56,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail };
+        window.firebase = { db, auth, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail };
         window.firebaseInitialized = true;
         
     </script>
@@ -182,6 +182,9 @@
                 <button onclick="switchDashboardTab('monthly')" id="tab-monthly" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
                     🌟 Monthly Awards
                 </button>
+                <button onclick="switchDashboardTab('calendar')" id="tab-calendar" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
+                    📅 Calendar
+                </button>
                 <button onclick="switchDashboardTab('lastGame')" id="tab-lastGame" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
                     🏟️ Last Game
                 </button>
@@ -212,6 +215,24 @@
                     </div>
                     <div id="playerOfTheMonth" class="space-y-4">
                         <p class="text-gray-500 dark:text-gray-400 text-center py-8">No games this month yet! 📅</p>
+                    </div>
+                </div>
+
+                <!-- Calendar Tab -->
+                <div id="content-calendar" class="dashboard-content hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-4">
+                            <div class="p-3 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 shadow-lg">
+                                <span class="text-white text-2xl">📅</span>
+                            </div>
+                            <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Upcoming Games</h3>
+                        </div>
+                        <button onclick="showScheduleGameModal()" id="scheduleGameBtn" class="hidden px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-lg">
+                            + Schedule Game
+                        </button>
+                    </div>
+                    <div id="calendarView" class="space-y-4">
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">No scheduled games yet! 📅</p>
                     </div>
                 </div>
 
@@ -338,6 +359,51 @@
                         </button>
                         <button onclick="completeSignup()" class="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg">
                             Create Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Game Modal -->
+    <div id="scheduleGameModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600">
+                        <span class="text-white text-xl">📅</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Schedule Game</h3>
+                </div>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📆 Date:</label>
+                        <input type="date" id="scheduledDate" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">⏰ Time:</label>
+                        <input type="time" id="scheduledTime" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📍 Location:</label>
+                        <input type="text" id="scheduledLocation" placeholder="Field name or address" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📝 Notes (optional):</label>
+                        <textarea id="scheduledNotes" placeholder="Any additional info..." rows="3" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                    </div>
+
+                    <div class="flex gap-3 mt-8">
+                        <button onclick="hideScheduleGameModal()" class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200">
+                            Cancel
+                        </button>
+                        <button onclick="scheduleGame()" class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg">
+                            Schedule Game
                         </button>
                     </div>
                 </div>
@@ -646,6 +712,7 @@
         let games = [];
         let players = [];
         let users = [];
+        let scheduledGames = [];
         let currentUser = null;
         let currentEditingPlayer = null;
         let currentGameIndex = null;
@@ -837,6 +904,28 @@
                     }
                 );
                 unsubscribeFunctions.push(unsubPlayers);
+
+                // Listen for scheduled games changes
+                const scheduledGamesQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'scheduledGames'), 
+                    window.firebase.orderBy('date', 'asc')
+                );
+                
+                const unsubScheduledGames = window.firebase.onSnapshot(scheduledGamesQuery, 
+                    (snapshot) => {
+                        scheduledGames = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                        console.log('Scheduled games updated:', scheduledGames.length, 'games', scheduledGames);
+                        updateCalendarDisplay();
+                    },
+                    (error) => {
+                        console.error('Scheduled games listener error:', error);
+                        console.error('Error code:', error.code);
+                        console.error('Error message:', error.message);
+                        // Still call updateCalendarDisplay to show the "no games" message
+                        updateCalendarDisplay();
+                    }
+                );
+                unsubscribeFunctions.push(unsubScheduledGames);
             }
 
             static async addGame(gameData) {
@@ -2236,9 +2325,9 @@
                 // Create Firebase auth account
                 const userCredential = await window.firebase.createUserWithEmailAndPassword(window.firebase.auth, validatedEmail, password);
                 
-                // Create user document in Firestore
-                await window.firebase.addDoc(
-                    window.firebase.collection(window.firebase.db, 'users'),
+                // Create user document in Firestore using the user's UID as the document ID
+                await window.firebase.setDoc(
+                    window.firebase.doc(window.firebase.db, 'users', userCredential.user.uid),
                     {
                         email: validatedEmail,
                         isAdmin: false,
@@ -2257,7 +2346,268 @@
             }
         }
 
+        // Schedule Game Functions
+        function showScheduleGameModal() {
+            document.getElementById('scheduleGameModal').classList.remove('hidden');
+            document.getElementById('scheduleGameModal').classList.add('flex');
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('scheduledDate').min = today;
+        }
 
+        function hideScheduleGameModal() {
+            document.getElementById('scheduleGameModal').classList.add('hidden');
+            document.getElementById('scheduleGameModal').classList.remove('flex');
+            document.getElementById('scheduledDate').value = '';
+            document.getElementById('scheduledTime').value = '';
+            document.getElementById('scheduledLocation').value = '';
+            document.getElementById('scheduledNotes').value = '';
+        }
+
+        async function scheduleGame() {
+            const date = document.getElementById('scheduledDate').value;
+            const time = document.getElementById('scheduledTime').value;
+            const location = document.getElementById('scheduledLocation').value.trim();
+            const notes = document.getElementById('scheduledNotes').value.trim();
+
+            if (!date) {
+                alert('Please select a date');
+                return;
+            }
+
+            if (!time) {
+                alert('Please select a time');
+                return;
+            }
+
+            if (!location) {
+                alert('Please enter a location');
+                return;
+            }
+
+            if (!currentUser) {
+                alert('Please log in to schedule a game');
+                return;
+            }
+
+            if (!currentUser.isAdmin) {
+                alert('Only administrators can schedule games');
+                return;
+            }
+
+            if (!window.firebase || !window.firebase.db) {
+                alert('Firebase not initialized. Please refresh the page.');
+                return;
+            }
+
+            try {
+                console.log('Attempting to schedule game as:', currentUser.email, 'isAdmin:', currentUser.isAdmin);
+                
+                // Create scheduled game document
+                await window.firebase.addDoc(
+                    window.firebase.collection(window.firebase.db, 'scheduledGames'),
+                    {
+                        date: date,
+                        time: time,
+                        location: location,
+                        notes: notes || '',
+                        availability: {},
+                        createdAt: window.firebase.serverTimestamp(),
+                        createdBy: currentUser.email,
+                        createdByUid: currentUser.id
+                    }
+                );
+
+                alert('✅ Game scheduled successfully!');
+                hideScheduleGameModal();
+            } catch (error) {
+                console.error('Error scheduling game:', error);
+                console.error('Error code:', error.code);
+                console.error('Error details:', error);
+                alert('Failed to schedule game: ' + error.message + '\n\nPlease check the console (F12) for more details.');
+            }
+        }
+
+        async function markAvailability(gameId, status) {
+            if (!currentUser) {
+                alert('Please log in to mark your availability');
+                return;
+            }
+
+            const linkedPlayer = currentUser.linkedPlayer 
+                ? players.find(p => p.id === currentUser.linkedPlayer) 
+                : null;
+
+            if (!linkedPlayer) {
+                alert('Your account is not linked to a player profile');
+                return;
+            }
+
+            try {
+                const gameRef = window.firebase.doc(window.firebase.db, 'scheduledGames', gameId);
+                await window.firebase.updateDoc(gameRef, {
+                    [`availability.${linkedPlayer.name}`]: status
+                });
+                console.log('Availability updated successfully for', linkedPlayer.name, ':', status);
+            } catch (error) {
+                console.error('Error updating availability:', error);
+                alert('Failed to update availability: ' + error.message);
+            }
+        }
+
+        async function deleteScheduledGame(gameId) {
+            if (!confirm('Are you sure you want to delete this scheduled game?')) {
+                return;
+            }
+
+            try {
+                await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'scheduledGames', gameId));
+                alert('Game deleted successfully');
+            } catch (error) {
+                console.error('Error deleting game:', error);
+                alert('Failed to delete game: ' + error.message);
+            }
+        }
+
+        function updateCalendarDisplay() {
+            const calendarView = document.getElementById('calendarView');
+            console.log('updateCalendarDisplay called, scheduledGames:', scheduledGames);
+            
+            if (!calendarView) {
+                console.error('Calendar view element not found!');
+                return;
+            }
+            
+            // Get linked player if logged in
+            const linkedPlayer = currentUser && currentUser.linkedPlayer 
+                ? players.find(p => p.id === currentUser.linkedPlayer) 
+                : null;
+            
+            if (scheduledGames.length === 0) {
+                calendarView.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">No scheduled games yet! 📅</p>';
+                return;
+            }
+
+            // Filter out past games
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const upcomingGames = scheduledGames.filter(game => {
+                const gameDate = new Date(game.date);
+                return gameDate >= today;
+            });
+
+            if (upcomingGames.length === 0) {
+                calendarView.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">No upcoming games scheduled! 📅</p>';
+                return;
+            }
+
+            calendarView.innerHTML = upcomingGames.map(game => {
+                const gameDate = new Date(game.date);
+                const formattedDate = gameDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const availability = game.availability || {};
+                const availableCount = Object.values(availability).filter(status => status === 'yes').length;
+                const noCount = Object.values(availability).filter(status => status === 'no').length;
+                const totalResponses = availableCount + noCount;
+                
+                // Get lists of players by status
+                const yesPlayers = Object.entries(availability).filter(([name, status]) => status === 'yes').map(([name]) => name);
+                const noPlayers = Object.entries(availability).filter(([name, status]) => status === 'no').map(([name]) => name);
+                
+                const currentPlayerStatus = linkedPlayer ? availability[linkedPlayer.name] : null;
+                
+                return `
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div class="flex flex-col md:flex-row justify-between gap-4 mb-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="p-2 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500">
+                                        <span class="text-white text-xl">📅</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-lg font-bold text-gray-900 dark:text-white">${formattedDate}</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">⏰ ${game.time}</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <p class="text-gray-700 dark:text-gray-300"><span class="font-semibold">📍 Location:</span> ${game.location}</p>
+                                    ${game.notes ? `<p class="text-gray-600 dark:text-gray-400"><span class="font-semibold">📝 Notes:</span> ${game.notes}</p>` : ''}
+                                </div>
+                            </div>
+                            
+                            ${currentUser && currentUser.isAdmin ? `
+                                <div class="flex items-start">
+                                    <button onclick="deleteScheduledGame('${game.id}')" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-all duration-200">
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h5 class="font-semibold text-gray-900 dark:text-white">Player Availability</h5>
+                                <span class="text-sm text-gray-600 dark:text-gray-400">${totalResponses} ${totalResponses === 1 ? 'response' : 'responses'}</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+                                    <div class="text-3xl font-bold text-green-600 dark:text-green-400">${availableCount}</div>
+                                    <div class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1">✅ Available</div>
+                                </div>
+                                <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 text-center">
+                                    <div class="text-3xl font-bold text-red-600 dark:text-red-400">${noCount}</div>
+                                    <div class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1">❌ Not Available</div>
+                                </div>
+                            </div>
+
+                            ${currentUser && linkedPlayer ? `
+                                <div class="flex gap-3">
+                                    <button onclick="markAvailability('${game.id}', 'yes')" class="flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${currentPlayerStatus === 'yes' ? 'bg-green-500 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/20'}">
+                                        ✅ I'm Available
+                                    </button>
+                                    <button onclick="markAvailability('${game.id}', 'no')" class="flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${currentPlayerStatus === 'no' ? 'bg-red-500 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/20'}">
+                                        ❌ Not Available
+                                    </button>
+                                </div>
+                            ` : !currentUser ? `
+                                <p class="text-sm text-gray-600 dark:text-gray-400 text-center py-2">
+                                    🔒 Please log in to mark your availability
+                                </p>
+                            ` : ''}
+
+                            ${totalResponses > 0 ? `
+                                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    ${yesPlayers.length > 0 ? `
+                                        <div class="bg-green-50 dark:bg-green-900/10 rounded-lg p-3">
+                                            <div class="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">✅ Available (${yesPlayers.length}):</div>
+                                            <div class="flex flex-wrap gap-2">
+                                                ${yesPlayers.map(name => `
+                                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                                                        ${name}
+                                                    </span>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    ${noPlayers.length > 0 ? `
+                                        <div class="bg-red-50 dark:bg-red-900/10 rounded-lg p-3">
+                                            <div class="text-sm font-semibold text-red-700 dark:text-red-300 mb-2">❌ Not Available (${noPlayers.length}):</div>
+                                            <div class="flex flex-wrap gap-2">
+                                                ${noPlayers.map(name => `
+                                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                                                        ${name}
+                                                    </span>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
         async function logout() {
             
@@ -2344,13 +2694,16 @@
                 
                 if (currentUser.isAdmin) {
                     adminControls.classList.remove('hidden');
+                    document.getElementById('scheduleGameBtn')?.classList.remove('hidden');
                 } else {
                     adminControls.classList.add('hidden');
+                    document.getElementById('scheduleGameBtn')?.classList.add('hidden');
                 }
             } else {
                 userInfo.innerHTML = '';
                 loginBtn.classList.remove('hidden');
                 adminControls.classList.add('hidden');
+                document.getElementById('scheduleGameBtn')?.classList.add('hidden');
             }
         }
 
@@ -4160,21 +4513,51 @@
                 if (user) {
                     
                     try {
-                        const usersQuery = window.firebase.query(
-                            window.firebase.collection(window.firebase.db, 'users')
-                        );
-                        const snapshot = await window.firebase.getDocs(usersQuery);
-                        
                         let isAdmin = false;
                         let userFound = false;
                         
-                        snapshot.docs.forEach(doc => {
-                            const data = doc.data();
-                            if (data.email === user.email) {
-                                isAdmin = data.isAdmin || false;
+                        // First, try to get user document by UID (new method)
+                        try {
+                            const userDocRef = window.firebase.doc(window.firebase.db, 'users', user.uid);
+                            const userDocSnap = await window.firebase.getDoc(userDocRef);
+                            
+                            if (userDocSnap.exists()) {
+                                const userData = userDocSnap.data();
+                                isAdmin = userData.isAdmin || false;
                                 userFound = true;
+                                console.log('User found by UID:', user.uid, 'isAdmin:', isAdmin);
                             }
-                        });
+                        } catch (uidError) {
+                            console.log('Could not find user by UID, trying email lookup...', uidError);
+                        }
+                        
+                        // If not found by UID, fall back to email query (old method)
+                        if (!userFound) {
+                            const usersQuery = window.firebase.query(
+                                window.firebase.collection(window.firebase.db, 'users')
+                            );
+                            const snapshot = await window.firebase.getDocs(usersQuery);
+                            
+                            snapshot.docs.forEach(doc => {
+                                const data = doc.data();
+                                if (data.email === user.email) {
+                                    isAdmin = data.isAdmin || false;
+                                    userFound = true;
+                                    console.log('User found by email query, isAdmin:', isAdmin);
+                                    
+                                    // Migrate old user document to use UID as document ID
+                                    console.log('Migrating user document to use UID...');
+                                    window.firebase.setDoc(
+                                        window.firebase.doc(window.firebase.db, 'users', user.uid),
+                                        { ...data }
+                                    ).then(() => {
+                                        console.log('User document migrated successfully');
+                                        // Optionally delete old document
+                                        window.firebase.deleteDoc(doc.ref).catch(err => console.error('Error deleting old doc:', err));
+                                    }).catch(err => console.error('Migration error:', err));
+                                }
+                            });
+                        }
                         
                         if (!userFound) {
                             // User not found in database - sign them out

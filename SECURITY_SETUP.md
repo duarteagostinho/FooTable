@@ -51,6 +51,15 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
+    
+    // Scheduled Games collection - anyone can read, admins can create/delete, authenticated users can update availability
+    match /scheduledGames/{gameId} {
+      allow read;
+      allow create, delete: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      allow update: if request.auth != null;
+    }
   }
 }
 ```
