@@ -34,6 +34,12 @@
             70% { transform: scale(0.9); }
             100% { opacity: 1; transform: scale(1.0); }
         }
+        
+        @media (min-width: 640px) {
+            #footballField > div {
+                min-height: 900px !important;
+            }
+        }
     </style>
 
     <!-- Firebase CDN -->
@@ -207,6 +213,9 @@
                 <button onclick="switchDashboardTab('calendar')" id="tab-calendar" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
                     📅 Calendar
                 </button>
+                <button onclick="switchDashboardTab('teamGenerator')" id="tab-teamGenerator" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
+                    ⚽ Team Generator
+                </button>
                 <button onclick="switchDashboardTab('lastGame')" id="tab-lastGame" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
                     🏟️ Last Game
                 </button>
@@ -255,6 +264,19 @@
                     </div>
                     <div id="calendarView" class="space-y-4">
                         <p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">No scheduled games yet! 📅</p>
+                    </div>
+                </div>
+
+                <!-- Team Generator Tab -->
+                <div id="content-teamGenerator" class="dashboard-content hidden">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="p-3 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg">
+                            <span class="text-white text-2xl">⚽</span>
+                        </div>
+                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Team Generator</h3>
+                    </div>
+                    <div id="teamGeneratorContent">
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">Loading... ⚽</p>
                     </div>
                 </div>
 
@@ -1514,6 +1536,8 @@
             // Refresh data based on tab
             if (tabName === 'allPlayers') {
                 displayAllPlayers();
+            } else if (tabName === 'teamGenerator') {
+                displayTeamGenerator();
             }
         }
 
@@ -2620,6 +2644,57 @@
             }
         }
 
+        // Admin functions to force player availability for testing
+        async function togglePlayerAvailability(gameId, playerName, makeAvailable) {
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('Only admins can force player availability');
+                return;
+            }
+
+            try {
+                const gameRef = window.firebase.doc(window.firebase.db, 'scheduledGames', gameId);
+                await window.firebase.updateDoc(gameRef, {
+                    [`availability.${playerName}`]: makeAvailable ? 'yes' : 'no'
+                });
+                console.log('Admin forced availability for', playerName, ':', makeAvailable ? 'yes' : 'no');
+                
+                // Refresh the display
+                setTimeout(() => displayTeamGenerator(), 300);
+            } catch (error) {
+                console.error('Error updating availability:', error);
+                alert('Failed to update availability: ' + error.message);
+            }
+        }
+
+        async function forceAllPlayersAvailable(gameId) {
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('Only admins can force player availability');
+                return;
+            }
+
+            if (!confirm(`Force all ${players.length} players as available for testing?`)) {
+                return;
+            }
+
+            try {
+                const gameRef = window.firebase.doc(window.firebase.db, 'scheduledGames', gameId);
+                const availabilityUpdates = {};
+                
+                players.forEach(p => {
+                    availabilityUpdates[`availability.${p.name}`] = 'yes';
+                });
+                
+                await window.firebase.updateDoc(gameRef, availabilityUpdates);
+                console.log('Admin forced all players available');
+                
+                // Refresh the display
+                setTimeout(() => displayTeamGenerator(), 300);
+            } catch (error) {
+                console.error('Error updating availability:', error);
+                alert('Failed to update availability: ' + error.message);
+            }
+        }
+
         function displayAllPlayers() {
             const grid = document.getElementById('allPlayersGrid');
             
@@ -2677,6 +2752,666 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        // Team Generator with 5-a-side football field visualization
+        function displayTeamGenerator() {
+            const container = document.getElementById('teamGeneratorContent');
+            if (!container) return;
+
+            // Find next upcoming scheduled game
+            if (!scheduledGames || scheduledGames.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No upcoming games scheduled 📅</p>';
+                return;
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const nextGame = scheduledGames
+                .map(g => ({ game: g, dateObj: new Date(g.date) }))
+                .filter(x => x.dateObj >= today)
+                .sort((a, b) => a.dateObj - b.dateObj)[0]?.game;
+
+            if (!nextGame) {
+                container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No upcoming games scheduled 📅</p>';
+                return;
+            }
+
+            // Collect players with availability = 'yes'
+            const availablePlayers = [];
+            const availability = nextGame.availability || {};
+            Object.entries(availability).forEach(([playerName, status]) => {
+                if (status === 'yes') {
+                    const p = players.find(pl => pl.name === playerName);
+                    if (p) availablePlayers.push(p);
+                }
+            });
+
+            const gameDateStr = new Date(nextGame.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            
+            if (availablePlayers.length < 10) {
+                // Show admin controls to force players as available
+                const unavailablePlayers = players.filter(p => {
+                    return !availablePlayers.find(ap => ap.id === p.id);
+                });
+
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-6">
+                            <p class="text-amber-900 dark:text-amber-200 text-lg font-semibold mb-2">⚠️ Not enough players available</p>
+                            <p class="text-sm text-amber-700 dark:text-amber-300">${gameDateStr} • ${nextGame.time} • ${nextGame.location}</p>
+                            <p class="text-sm text-amber-700 dark:text-amber-300 mt-2">Currently available: <strong>${availablePlayers.length}</strong> / 10 minimum needed</p>
+                            ${!currentUser || !currentUser.isAdmin ? '<p class="text-sm text-amber-600 dark:text-amber-400 mt-3">👀 Waiting for admin to generate teams...</p>' : ''}
+                        </div>
+
+                        ${currentUser && currentUser.isAdmin ? '<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6"><div class="flex items-center justify-between mb-4"><h4 class="font-bold text-lg text-gray-900 dark:text-white">🔧 Admin Controls</h4><button onclick="forceAllPlayersAvailable(\'' + nextGame.id + '\')" class="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-indigo-700 transition-all text-sm shadow-lg">✨ Force All Available</button></div><p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Click individual players below to toggle their availability for testing:</p><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">' + players.map(p => {
+                                    const isAvailable = availablePlayers.find(ap => ap.id === p.id);
+                                    const photoUrl = p.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name);
+                                    return '<button onclick="togglePlayerAvailability(\'' + nextGame.id + '\', \'' + p.name + '\', ' + !isAvailable + ')" class="flex items-center gap-3 p-3 rounded-lg border-2 transition-all ' + (isAvailable ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-400') + '"><img src="' + photoUrl + '" alt="' + p.name + '" class="w-10 h-10 rounded-full object-cover"><div class="flex-1 text-left"><div class="font-semibold text-sm text-gray-900 dark:text-white">' + p.name + '</div><div class="text-xs ' + (isAvailable ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400') + '">' + (isAvailable ? '✅ Available' : '❌ Not Available') + '</div></div></button>';
+                                }).join('') + '</div></div>' : ''}
+                    </div>
+                `;
+                return;
+            }
+
+            // Render UI with football field
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <p class="text-sm text-blue-900 dark:text-blue-200">📅 <strong>${gameDateStr}</strong> at <strong>${nextGame.time}</strong> — ${nextGame.location}</p>
+                        <p class="text-xs text-blue-700 dark:text-blue-300 mt-2">Available Players: ${availablePlayers.length}</p>
+                    </div>
+
+                    ${currentUser && currentUser.isAdmin ? `<!-- Admin Player Management -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="font-bold text-lg text-gray-900 dark:text-white">🔧 Manage Player Availability</h4>
+                            <button onclick="forceAllPlayersAvailable('${nextGame.id}')" class="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-indigo-700 transition-all text-sm shadow-lg">
+                                ✨ Force All Available
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Click any player to toggle their availability:</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
+                            ${players.map(p => {
+                                const isAvailable = availablePlayers.find(ap => ap.id === p.id);
+                                return `
+                                    <button onclick="togglePlayerAvailability('${nextGame.id}', '${p.name}', ${!isAvailable})" 
+                                            class="flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
+                                                isAvailable 
+                                                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
+                                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-400'
+                                            }">
+                                        <img src="${p.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" 
+                                             alt="${p.name}" class="w-10 h-10 rounded-full object-cover">
+                                        <div class="flex-1 text-left">
+                                            <div class="font-semibold text-sm text-gray-900 dark:text-white">${p.name}</div>
+                                            <div class="text-xs ${isAvailable ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}">
+                                                ${isAvailable ? '✅ Available' : '❌ Not Available'}
+                                            </div>
+                                        </div>
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>` : ''}
+
+                    ${currentUser && currentUser.isAdmin ? `<div class="text-center mb-4">
+                        <button onclick="generateBalancedTeams()" class="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold text-base sm:text-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
+                            ⚖️ Generate Balanced Teams
+                        </button>
+                    </div>` : !nextGame.generatedTeams ? `<div class="bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 sm:p-8 text-center">
+                        <p class="text-gray-600 dark:text-gray-400 text-lg">👀 Waiting for admin to generate teams...</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">Teams will appear here once the admin generates them</p>
+                    </div>` : ''}
+
+                    <div id="footballField" class="hidden">
+                        <div class="relative bg-gradient-to-br from-green-600 via-green-600 to-green-700 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-2xl mx-auto w-full sm:w-auto" style="max-width: 600px; min-height: 600px;">
+                                <!-- Field markings -->
+                                <div class="absolute inset-2 sm:inset-4 border-2 sm:border-4 border-white/50 rounded-xl sm:rounded-2xl"></div>
+                                <div class="absolute left-2 right-2 sm:left-4 sm:right-4 top-1/2 h-0.5 bg-white/50 -translate-y-1/2"></div>
+                                <div class="absolute left-1/2 top-1/2 w-20 h-20 sm:w-28 sm:h-28 border-2 sm:border-4 border-white/50 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+                                
+                                <!-- Penalty areas -->
+                                <div class="absolute left-1/2 top-2 sm:top-4 w-28 h-14 sm:w-40 sm:h-20 border-2 sm:border-4 border-white/40 border-t-0 rounded-b-xl sm:rounded-b-2xl -translate-x-1/2"></div>
+                                <div class="absolute left-1/2 bottom-2 sm:bottom-4 w-28 h-14 sm:w-40 sm:h-20 border-2 sm:border-4 border-white/40 border-b-0 rounded-t-xl sm:rounded-t-2xl -translate-x-1/2"></div>
+                                
+                                <!-- Team 1 (Blue) - Top Half -->
+                                <div class="absolute left-0 right-0 top-6 sm:top-8 h-[45%] flex flex-col justify-around items-center px-3 sm:px-6 py-2 sm:py-4">
+                                    <div class="absolute top-3 sm:top-4 left-4 sm:left-6 bg-blue-600/80 backdrop-blur-sm px-3 sm:px-6 py-1 sm:py-2 rounded-full shadow-lg z-10">
+                                        <h3 class="text-white font-bold text-sm sm:text-lg drop-shadow-lg">🔵 Team 1</h3>
+                                    </div>
+                                    
+                                    <!-- Forward -->
+                                    <div id="team1-fwd" class="flex justify-center pt-10 sm:pt-12">
+                                    <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-blue-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                        <div class="w-full h-full bg-blue-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">FWD</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Wingers/Defenders (Side positions) -->
+                                <div id="team1-def" class="flex justify-between w-full px-6 sm:px-8">
+                                    <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-blue-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                        <div class="w-full h-full bg-blue-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">DEF</div>
+                                    </div>
+                                    <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-blue-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                        <div class="w-full h-full bg-blue-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">DEF</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Midfield -->
+                                <div id="team1-mid" class="flex justify-center">
+                                    <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-blue-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                        <div class="w-full h-full bg-blue-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">MID</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Team 1 GK - Top Goal -->
+                            <div class="absolute left-1/2 -translate-x-1/2 top-2 sm:top-3 z-20">
+                                <div id="team1-gk" class="flex justify-center">
+                                    <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-yellow-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                        <div class="w-full h-full bg-yellow-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">GK</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                                <!-- Team 2 (Red) - Bottom Half -->
+                                <div class="absolute left-0 right-0 bottom-6 sm:bottom-8 h-[45%] flex flex-col-reverse justify-around items-center px-3 sm:px-6 py-2 sm:py-4">
+                                    <div class="absolute bottom-3 sm:bottom-4 right-4 sm:right-6 bg-red-600/80 backdrop-blur-sm px-3 sm:px-6 py-1 sm:py-2 rounded-full shadow-lg z-10">
+                                        <h3 class="text-white font-bold text-sm sm:text-lg drop-shadow-lg">🔴 Team 2</h3>
+                                    </div>
+                                    
+                                    <!-- Forward -->
+                                    <div id="team2-fwd" class="flex justify-center pb-10 sm:pb-12">
+                                    <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-red-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                        <div class="w-full h-full bg-red-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">FWD</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Wingers/Defenders (Side positions) -->
+                                <div id="team2-def" class="flex justify-between w-full px-6 sm:px-8">
+                                    <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-red-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                        <div class="w-full h-full bg-red-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">DEF</div>
+                                    </div>
+                                    <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-red-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                        <div class="w-full h-full bg-red-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">DEF</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Midfield -->
+                                <div id="team2-mid" class="flex justify-center">
+                                    <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-red-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                        <div class="w-full h-full bg-red-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">MID</div>
+                                    </div>
+                                </div>
+                                </div>
+                                
+                                <!-- Team 2 GK - Bottom Goal -->
+                                <div class="absolute left-1/2 -translate-x-1/2 bottom-2 sm:bottom-3 z-20">
+                                    <div id="team2-gk" class="flex justify-center">
+                                        <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 border-yellow-400 shadow-xl sm:shadow-2xl bg-gray-200">
+                                            <div class="w-full h-full bg-yellow-500 flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">GK</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Team Lists Below Field -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                            <!-- Team 1 List -->
+                            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border-2 border-blue-300 dark:border-blue-700">
+                                <h4 class="font-bold text-xl mb-4 text-blue-900 dark:text-blue-100">🔵 Team 1</h4>
+                                <div id="team1List" class="space-y-2"></div>
+                            </div>
+                            
+                            <!-- Team 2 List -->
+                            <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-6 border-2 border-red-300 dark:border-red-700">
+                                <h4 class="font-bold text-xl mb-4 text-red-900 dark:text-red-100">🔴 Team 2</h4>
+                                <div id="team2List" class="space-y-2"></div>
+                            </div>
+                        </div>
+
+                        <!-- Substitutes Bench -->
+                        <div id="substitutesBench" class="mt-6 bg-gray-50 dark:bg-gray-800 rounded-xl p-6 border-2 border-gray-300 dark:border-gray-600 hidden">
+                            <h4 class="font-bold text-xl mb-4 text-gray-900 dark:text-gray-100">🪑 Substitutes Bench</h4>
+                            <div id="substitutesList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Store available players and game ID globally for the generate function
+            window.teamGenAvailablePlayers = availablePlayers;
+            window.teamGenGameId = nextGame.id;
+            
+            // Check if teams already exist for this game and display them
+            if (nextGame.generatedTeams) {
+                const savedTeam1 = nextGame.generatedTeams.team1 || [];
+                const savedTeam2 = nextGame.generatedTeams.team2 || [];
+                const savedTeam1Subs = nextGame.generatedTeams.team1Subs || [];
+                const savedTeam2Subs = nextGame.generatedTeams.team2Subs || [];
+                
+                // Convert player names back to player objects
+                const team1 = savedTeam1.map(name => players.find(p => p.name === name)).filter(p => p);
+                const team2 = savedTeam2.map(name => players.find(p => p.name === name)).filter(p => p);
+                const team1Subs = savedTeam1Subs.map(name => players.find(p => p.name === name)).filter(p => p);
+                const team2Subs = savedTeam2Subs.map(name => players.find(p => p.name === name)).filter(p => p);
+                
+                if (team1.length > 0 && team2.length > 0) {
+                    setTimeout(() => displayTeamsOnField(team1, team2, team1Subs, team2Subs), 100);
+                }
+            }
+        }
+
+        // Generate balanced teams based on last game and player stats
+        function generateBalancedTeams() {
+            const availablePlayers = window.teamGenAvailablePlayers || [];
+            if (availablePlayers.length < 10) {
+                alert('Need at least 10 players for 5-a-side teams');
+                return;
+            }
+
+            // Get last game to determine winners/losers
+            const lastGame = games && games.length > 0 ? games[games.length - 1] : null;
+            const winners = new Set();
+            const losers = new Set();
+            
+            if (lastGame && Array.isArray(lastGame.team1) && Array.isArray(lastGame.team2)) {
+                if ((lastGame.score1 ?? 0) > (lastGame.score2 ?? 0)) {
+                    lastGame.team1.forEach(n => winners.add(n));
+                    lastGame.team2.forEach(n => losers.add(n));
+                } else if ((lastGame.score2 ?? 0) > (lastGame.score1 ?? 0)) {
+                    lastGame.team2.forEach(n => winners.add(n));
+                    lastGame.team1.forEach(n => losers.add(n));
+                }
+            }
+
+            // Calculate player strength score
+            const getPlayerStrength = (p) => {
+                const winRate = getWinPercentage(p);
+                const goals = p.goals || 0;
+                const assists = p.assists || 0;
+                const level = calculateLevel(p.xp || 0);
+                let base = winRate * 1.0 + goals * 2.0 + assists * 1.5 + level * 3.0;
+                
+                // Adjust for last game outcome
+                if (winners.has(p.name)) base += 8;
+                if (losers.has(p.name)) base -= 8;
+                
+                return base;
+            };
+
+            // Sort players by strength
+            const sortedPlayers = [...availablePlayers]
+                .map(p => ({ player: p, strength: getPlayerStrength(p) }))
+                .sort((a, b) => b.strength - a.strength);
+
+            // Greedy assignment to balance teams (5 per team minimum, rest distributed)
+            const team1 = [];
+            const team2 = [];
+            let strength1 = 0;
+            let strength2 = 0;
+
+            // First, assign first 10 players (5 per team) for balanced starting lineup
+            for (let i = 0; i < Math.min(10, sortedPlayers.length); i++) {
+                const { player, strength } = sortedPlayers[i];
+                
+                if (team1.length < 5 && team2.length < 5) {
+                    // Both teams need starters, assign to weaker team
+                    if (strength1 <= strength2) {
+                        team1.push(player);
+                        strength1 += strength;
+                    } else {
+                        team2.push(player);
+                        strength2 += strength;
+                    }
+                } else if (team1.length < 5) {
+                    team1.push(player);
+                    strength1 += strength;
+                } else if (team2.length < 5) {
+                    team2.push(player);
+                    strength2 += strength;
+                }
+            }
+
+            // Then assign remaining players as substitutes to balance teams
+            const team1Subs = [];
+            const team2Subs = [];
+            
+            for (let i = 10; i < sortedPlayers.length; i++) {
+                const { player, strength } = sortedPlayers[i];
+                
+                // Add to the team with lower total strength (including subs)
+                if (strength1 <= strength2) {
+                    team1Subs.push(player);
+                    strength1 += strength;
+                } else {
+                    team2Subs.push(player);
+                    strength2 += strength;
+                }
+            }
+
+            // Save teams to Firebase with substitutes
+            saveTeamsToFirebase(team1, team2, team1Subs, team2Subs);
+            
+            // Display teams on field with their subs
+            displayTeamsOnField(team1, team2, team1Subs, team2Subs);
+        }
+        
+        // Save generated teams to Firebase
+        async function saveTeamsToFirebase(team1, team2, team1Subs = [], team2Subs = []) {
+            const gameId = window.teamGenGameId;
+            if (!gameId || !window.firebaseInitialized) return;
+            
+            try {
+                const gameRef = window.firebase.doc(window.firebase.db, 'scheduledGames', gameId);
+                await window.firebase.updateDoc(gameRef, {
+                    'generatedTeams.team1': team1.map(p => p.name),
+                    'generatedTeams.team2': team2.map(p => p.name),
+                    'generatedTeams.team1Subs': team1Subs.map(p => p.name),
+                    'generatedTeams.team2Subs': team2Subs.map(p => p.name),
+                    'generatedTeams.timestamp': new Date().toISOString()
+                });
+                console.log('Teams saved to Firebase successfully');
+            } catch (error) {
+                console.error('Error saving teams:', error);
+            }
+        }
+
+        function displayTeamsOnField(team1, team2, team1Subs = [], team2Subs = []) {
+            // Show the field
+            document.getElementById('footballField').classList.remove('hidden');
+
+            // Assign positions (GK, 2xDEF, MID, FWD) - reversed order for top-to-bottom
+            const positions = ['fwd', 'mid', 'def', 'def', 'gk'];
+            
+            // Clear all positions first
+            ['team1', 'team2'].forEach(teamPrefix => {
+                ['gk', 'fwd', 'mid', 'def'].forEach(pos => {
+                    const elem = document.getElementById(`${teamPrefix}-${pos}`);
+                    if (elem) {
+                        const circles = elem.querySelectorAll('.rounded-full');
+                        circles.forEach(circle => {
+                            const isGK = pos === 'gk';
+                            const isTeam1 = teamPrefix === 'team1';
+                            const borderColor = isGK ? 'border-yellow-400' : (isTeam1 ? 'border-blue-400' : 'border-red-400');
+                            const bgColor = isGK ? 'bg-yellow-500' : (isTeam1 ? 'bg-blue-500' : 'bg-red-500');
+                            const posLabel = pos.toUpperCase();
+                            
+                            circle.innerHTML = `<div class="w-full h-full ${bgColor} flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">${posLabel}</div>`;
+                            circle.className = `w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 ${borderColor} shadow-xl sm:shadow-2xl bg-gray-200`;
+                            circle.onclick = null;
+                        });
+                    }
+                });
+            });
+            
+            // Update Team 1
+            team1.slice(0, 5).forEach((player, idx) => {
+                const pos = positions[idx];
+                const elem = document.getElementById(`team1-${pos}`);
+                if (elem) {
+                    let circles = elem.querySelectorAll('.rounded-full');
+                    // For defenders (2 positions), find the right circle
+                    if (pos === 'def') {
+                        circles = Array.from(circles);
+                        const defIndex = idx - 2; // 0 or 1 for first or second defender
+                        const circle = circles[defIndex];
+                        if (circle) {
+                            const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name);
+                            circle.innerHTML = `<img src="${photoUrl}" alt="${player.name}" class="w-full h-full object-cover" title="${player.name}">`;
+                            circle.classList.remove('bg-gray-200');
+                            circle.classList.add('cursor-pointer', 'hover:scale-110', 'transition-transform');
+                            circle.onclick = () => showPlayerProfile(player.id);
+                        }
+                    } else {
+                        const circle = circles[0];
+                        if (circle) {
+                            const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name);
+                            circle.innerHTML = `<img src="${photoUrl}" alt="${player.name}" class="w-full h-full object-cover" title="${player.name}">`;
+                            circle.classList.remove('bg-gray-200');
+                            circle.classList.add('cursor-pointer', 'hover:scale-110', 'transition-transform');
+                            circle.onclick = () => showPlayerProfile(player.id);
+                            if (pos === 'gk') {
+                                circle.classList.remove('border-blue-400');
+                                circle.classList.add('border-yellow-400');
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Update Team 2
+            team2.slice(0, 5).forEach((player, idx) => {
+                const pos = positions[idx];
+                const elem = document.getElementById(`team2-${pos}`);
+                if (elem) {
+                    let circles = elem.querySelectorAll('.rounded-full');
+                    // For defenders (2 positions), find the right circle
+                    if (pos === 'def') {
+                        circles = Array.from(circles);
+                        const defIndex = idx - 2; // 0 or 1 for first or second defender
+                        const circle = circles[defIndex];
+                        if (circle) {
+                            const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name);
+                            circle.innerHTML = `<img src="${photoUrl}" alt="${player.name}" class="w-full h-full object-cover" title="${player.name}">`;
+                            circle.classList.remove('bg-gray-200');
+                            circle.classList.add('cursor-pointer', 'hover:scale-110', 'transition-transform');
+                            circle.onclick = () => showPlayerProfile(player.id);
+                        }
+                    } else {
+                        const circle = circles[0];
+                        if (circle) {
+                            const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name);
+                            circle.innerHTML = `<img src="${photoUrl}" alt="${player.name}" class="w-full h-full object-cover" title="${player.name}">`;
+                            circle.classList.remove('bg-gray-200');
+                            circle.classList.add('cursor-pointer', 'hover:scale-110', 'transition-transform');
+                            circle.onclick = () => showPlayerProfile(player.id);
+                            if (pos === 'gk') {
+                                circle.classList.remove('border-red-400');
+                                circle.classList.add('border-yellow-400');
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Store teams globally for admin controls
+            window.currentTeam1 = team1;
+            window.currentTeam2 = team2;
+            window.currentTeam1Subs = team1Subs;
+            window.currentTeam2Subs = team2Subs;
+
+            // Display full team lists
+            const team1List = document.getElementById('team1List');
+            const team2List = document.getElementById('team2List');
+            const isAdmin = currentUser && currentUser.isAdmin;
+            
+            if (team1List) {
+                const allTeam1 = [...team1, ...team1Subs];
+                team1List.innerHTML = allTeam1.map((p, idx) => {
+                    const isStarter = idx < 5;
+                    return `
+                    <div class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg ${!isStarter ? 'opacity-75 border-l-4 border-blue-300' : ''}">
+                        <img src="${p.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" 
+                             alt="${p.name}" class="w-10 h-10 rounded-full object-cover">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">${isStarter ? (positions[idx]?.toUpperCase() || 'PLAYER') : 'SUB'} • Lv${calculateLevel(p.xp || 0)}</div>
+                        </div>
+                        <div class="text-sm text-blue-600 dark:text-blue-400 font-bold">${getWinPercentage(p)}%</div>
+                        ${isAdmin ? `
+                            <div class="flex gap-1">
+                                <button onclick="swapPlayerFieldBench('${p.name}', 1)" class="text-xs px-2 py-1 ${isStarter ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors" title="${isStarter ? 'Send to Bench' : 'Put on Field'}">
+                                    ${isStarter ? '🪑' : '⚽'}
+                                </button>
+                                <button onclick="movePlayerToTeam('${p.name}', 1, 2)" class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors" title="Move to Team 2">
+                                    →
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `}).join('');
+            }
+            
+            if (team2List) {
+                const allTeam2 = [...team2, ...team2Subs];
+                team2List.innerHTML = allTeam2.map((p, idx) => {
+                    const isStarter = idx < 5;
+                    return `
+                    <div class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg ${!isStarter ? 'opacity-75 border-l-4 border-red-300' : ''}">
+                        <img src="${p.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" 
+                             alt="${p.name}" class="w-10 h-10 rounded-full object-cover">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">${isStarter ? (positions[idx]?.toUpperCase() || 'PLAYER') : 'SUB'} • Lv${calculateLevel(p.xp || 0)}</div>
+                        </div>
+                        <div class="text-sm text-red-600 dark:text-red-400 font-bold">${getWinPercentage(p)}%</div>
+                        ${isAdmin ? `
+                            <div class="flex gap-1">
+                                <button onclick="swapPlayerFieldBench('${p.name}', 2)" class="text-xs px-2 py-1 ${isStarter ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors" title="${isStarter ? 'Send to Bench' : 'Put on Field'}">
+                                    ${isStarter ? '🪑' : '⚽'}
+                                </button>
+                                <button onclick="movePlayerToTeam('${p.name}', 2, 1)" class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors" title="Move to Team 1">
+                                    ←
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `}).join('');
+            }
+
+            // Hide the separate substitutes bench section
+            const benchDiv = document.getElementById('substitutesBench');
+            if (benchDiv) {
+                benchDiv.classList.add('hidden');
+            }
+
+            // Scroll to field
+            document.getElementById('footballField').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Move player from one team to another
+        async function swapPlayerFieldBench(playerName, team) {
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('Only admins can modify teams');
+                return;
+            }
+
+            let team1 = [...window.currentTeam1];
+            let team2 = [...window.currentTeam2];
+            let team1Subs = [...window.currentTeam1Subs];
+            let team2Subs = [...window.currentTeam2Subs];
+            
+            if (team === 1) {
+                // Check if player is on field
+                let idx = team1.findIndex(p => p.name === playerName);
+                if (idx !== -1) {
+                    // Move to bench and promote first sub if available
+                    const player = team1.splice(idx, 1)[0];
+                    team1Subs.push(player);
+                    
+                    // Auto-promote first sub to maintain 5 players
+                    if (team1Subs.length > 1 && team1.length < 5) {
+                        const promoted = team1Subs.shift(); // Remove first sub (the one we just added is at the end)
+                        team1.push(promoted);
+                    }
+                } else {
+                    // Check if on bench
+                    idx = team1Subs.findIndex(p => p.name === playerName);
+                    if (idx !== -1 && team1.length < 5) {
+                        // Move to field (only if there's space)
+                        const player = team1Subs.splice(idx, 1)[0];
+                        team1.push(player);
+                    } else if (idx !== -1) {
+                        alert('Team 1 already has 5 players on field. Move someone to bench first.');
+                        return;
+                    }
+                }
+            } else {
+                // Check if player is on field
+                let idx = team2.findIndex(p => p.name === playerName);
+                if (idx !== -1) {
+                    // Move to bench and promote first sub if available
+                    const player = team2.splice(idx, 1)[0];
+                    team2Subs.push(player);
+                    
+                    // Auto-promote first sub to maintain 5 players
+                    if (team2Subs.length > 1 && team2.length < 5) {
+                        const promoted = team2Subs.shift(); // Remove first sub (the one we just added is at the end)
+                        team2.push(promoted);
+                    }
+                } else {
+                    // Check if on bench
+                    idx = team2Subs.findIndex(p => p.name === playerName);
+                    if (idx !== -1 && team2.length < 5) {
+                        // Move to field (only if there's space)
+                        const player = team2Subs.splice(idx, 1)[0];
+                        team2.push(player);
+                    } else if (idx !== -1) {
+                        alert('Team 2 already has 5 players on field. Move someone to bench first.');
+                        return;
+                    }
+                }
+            }
+
+            // Update display and save
+            window.currentTeam1 = team1;
+            window.currentTeam2 = team2;
+            window.currentTeam1Subs = team1Subs;
+            window.currentTeam2Subs = team2Subs;
+            displayTeamsOnField(team1, team2, team1Subs, team2Subs);
+            await saveTeamsToFirebase(team1, team2, team1Subs, team2Subs);
+        }
+
+        async function movePlayerToTeam(playerName, fromTeam, toTeam) {
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('Only admins can move players');
+                return;
+            }
+
+            let team1 = [...window.currentTeam1];
+            let team2 = [...window.currentTeam2];
+            let team1Subs = [...window.currentTeam1Subs];
+            let team2Subs = [...window.currentTeam2Subs];
+            
+            // Find and remove player from source team (including subs)
+            if (fromTeam === 1) {
+                let idx = team1.findIndex(p => p.name === playerName);
+                if (idx !== -1) {
+                    const player = team1.splice(idx, 1)[0];
+                    team2.push(player);
+                } else {
+                    idx = team1Subs.findIndex(p => p.name === playerName);
+                    if (idx !== -1) {
+                        const player = team1Subs.splice(idx, 1)[0];
+                        team2Subs.push(player);
+                    }
+                }
+            } else {
+                let idx = team2.findIndex(p => p.name === playerName);
+                if (idx !== -1) {
+                    const player = team2.splice(idx, 1)[0];
+                    team1.push(player);
+                } else {
+                    idx = team2Subs.findIndex(p => p.name === playerName);
+                    if (idx !== -1) {
+                        const player = team2Subs.splice(idx, 1)[0];
+                        team1Subs.push(player);
+                    }
+                }
+            }
+
+            // Update display and save
+            window.currentTeam1 = team1;
+            window.currentTeam2 = team2;
+            window.currentTeam1Subs = team1Subs;
+            window.currentTeam2Subs = team2Subs;
+            displayTeamsOnField(team1, team2, team1Subs, team2Subs);
+            await saveTeamsToFirebase(team1, team2, team1Subs, team2Subs);
         }
 
         function updateCalendarDisplay() {
