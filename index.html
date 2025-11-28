@@ -1040,7 +1040,37 @@
                         updateCalendarDisplay();
                     }
                 );
+
                 unsubscribeFunctions.push(unsubScheduledGames);
+
+                // Listen for startingMatch changes for the current game
+                function setupStartingMatchListener(gameId) {
+                    if (!gameId || !window.firebaseInitialized) return;
+                    const gameRef = window.firebase.doc(window.firebase.db, 'scheduledGames', gameId);
+                    window.firebase.onSnapshot(gameRef, (docSnap) => {
+                        const data = docSnap.data();
+                        if (data && data.generatedTeams && data.generatedTeams.startingMatch) {
+                            const { teamA, teamB } = data.generatedTeams.startingMatch;
+                            // Only update if 3 teams exist
+                            if (data.generatedTeams.team3 && data.generatedTeams.team3.length > 0) {
+                                // Get player objects for each team
+                                const players = window.teamGenAvailablePlayers || [];
+                                const t1 = (data.generatedTeams.team1 || []).map(name => players.find(p => p.name === name)).filter(Boolean);
+                                const t2 = (data.generatedTeams.team2 || []).map(name => players.find(p => p.name === name)).filter(Boolean);
+                                const t3 = (data.generatedTeams.team3 || []).map(name => players.find(p => p.name === name)).filter(Boolean);
+                                // Map team number to array
+                                const teams = { 1: t1, 2: t2, 3: t3 };
+                                // Show selected teams on field
+                                displayTeamsOnField(teams[teamA], teams[teamB], [], [], []);
+                            }
+                        }
+                    });
+                }
+
+                // Setup listener for the current game
+                if (window.teamGenGameId) {
+                    setupStartingMatchListener(window.teamGenGameId);
+                }
 
                 // Listen for notifications changes
                 const notificationsQuery = window.firebase.query(
@@ -2959,8 +2989,9 @@
                         </div>
                     </div>
 
+
                     <!-- Team Lists Below Field -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                        <div id="teamListsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                             <!-- Team 1 List -->
                             <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border-2 border-blue-300 dark:border-blue-700">
                                 <h4 class="font-bold text-xl mb-4 text-blue-900 dark:text-blue-100">🔵 Team 1</h4>
@@ -2971,6 +3002,12 @@
                             <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-6 border-2 border-red-300 dark:border-red-700">
                                 <h4 class="font-bold text-xl mb-4 text-red-900 dark:text-red-100">🔴 Team 2</h4>
                                 <div id="team2List" class="space-y-2"></div>
+                            </div>
+
+                            <!-- Team 3 List (only shown when 3 teams exist) -->
+                            <div id="team3Container" class="hidden bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border-2 border-green-300 dark:border-green-700">
+                                <h4 class="font-bold text-xl mb-4 text-green-900 dark:text-green-100">🟢 Team 3</h4>
+                                <div id="team3List" class="space-y-2"></div>
                             </div>
                         </div>
 
@@ -2993,15 +3030,29 @@
                 const savedTeam2 = nextGame.generatedTeams.team2 || [];
                 const savedTeam1Subs = nextGame.generatedTeams.team1Subs || [];
                 const savedTeam2Subs = nextGame.generatedTeams.team2Subs || [];
+                const savedTeam3 = nextGame.generatedTeams.team3 || [];
                 
                 // Convert player names back to player objects
                 const team1 = savedTeam1.map(name => players.find(p => p.name === name)).filter(p => p);
                 const team2 = savedTeam2.map(name => players.find(p => p.name === name)).filter(p => p);
                 const team1Subs = savedTeam1Subs.map(name => players.find(p => p.name === name)).filter(p => p);
                 const team2Subs = savedTeam2Subs.map(name => players.find(p => p.name === name)).filter(p => p);
+                const team3 = savedTeam3.map(name => players.find(p => p.name === name)).filter(p => p);
                 
                 if (team1.length > 0 && team2.length > 0) {
-                    setTimeout(() => displayTeamsOnField(team1, team2, team1Subs, team2Subs), 100);
+                    // If 3 teams and a startingMatch is set in Firestore, show those teams
+                    const startingMatch = nextGame.generatedTeams.startingMatch;
+                    if (team3.length > 0 && startingMatch && startingMatch.teamA && startingMatch.teamB) {
+                        const teams = { 1: team1, 2: team2, 3: team3 };
+                        // Always use Firestore startingMatch if present
+                        setTimeout(() => displayTeamsOnField(teams[startingMatch.teamA], teams[startingMatch.teamB], [], [], team3), 100);
+                    } else if (team3.length > 0) {
+                        // If 3 teams but no startingMatch, default to 1 vs 2
+                        setTimeout(() => displayTeamsOnField(team1, team2, [], [], team3), 100);
+                    } else {
+                        // Only 2 teams
+                        setTimeout(() => displayTeamsOnField(team1, team2, team1Subs, team2Subs, team3), 100);
+                    }
                 }
             }
         }
@@ -3013,6 +3064,9 @@
                 alert('Need at least 10 players for 5-a-side teams');
                 return;
             }
+
+            // Check if we can make 3 teams (15+ players)
+            const canMake3Teams = availablePlayers.length >= 15;
 
             // Get last game to determine winners/losers
             const lastGame = games && games.length > 0 ? games[games.length - 1] : null;
@@ -3049,81 +3103,151 @@
                 .map(p => ({ player: p, strength: getPlayerStrength(p) }))
                 .sort((a, b) => b.strength - a.strength);
 
-            // Greedy assignment to balance teams (5 per team minimum, rest distributed)
+            // Greedy assignment to balance teams
             const team1 = [];
             const team2 = [];
+            const team3 = [];
             let strength1 = 0;
             let strength2 = 0;
+            let strength3 = 0;
 
-            // First, assign first 10 players (5 per team) for balanced starting lineup
-            for (let i = 0; i < Math.min(10, sortedPlayers.length); i++) {
-                const { player, strength } = sortedPlayers[i];
-                
-                if (team1.length < 5 && team2.length < 5) {
-                    // Both teams need starters, assign to weaker team
-                    if (strength1 <= strength2) {
+            if (canMake3Teams) {
+                // Distribute first 15 players (5 per team) for balanced lineups
+                for (let i = 0; i < Math.min(15, sortedPlayers.length); i++) {
+                    const { player, strength } = sortedPlayers[i];
+                    
+                    // Find team with lowest strength that still needs players
+                    if (team1.length < 5 && team2.length < 5 && team3.length < 5) {
+                        // All teams need players - assign to weakest
+                        if (strength1 <= strength2 && strength1 <= strength3) {
+                            team1.push(player);
+                            strength1 += strength;
+                        } else if (strength2 <= strength3) {
+                            team2.push(player);
+                            strength2 += strength;
+                        } else {
+                            team3.push(player);
+                            strength3 += strength;
+                        }
+                    } else if (team1.length < 5) {
                         team1.push(player);
                         strength1 += strength;
-                    } else {
+                    } else if (team2.length < 5) {
+                        team2.push(player);
+                        strength2 += strength;
+                    } else if (team3.length < 5) {
+                        team3.push(player);
+                        strength3 += strength;
+                    }
+                }
+
+                // Remaining players become shared substitutes
+                const sharedSubs = [];
+                for (let i = 15; i < sortedPlayers.length; i++) {
+                    sharedSubs.push(sortedPlayers[i].player);
+                }
+
+                // Save and display all 3 teams
+                saveTeamsToFirebase(team1, team2, [], [], team3, sharedSubs);
+                displayTeamsOnField(team1, team2, [], [], team3);
+            } else {
+                // 2 teams mode (original logic)
+                for (let i = 0; i < Math.min(10, sortedPlayers.length); i++) {
+                    const { player, strength } = sortedPlayers[i];
+                    
+                    if (team1.length < 5 && team2.length < 5) {
+                        if (strength1 <= strength2) {
+                            team1.push(player);
+                            strength1 += strength;
+                        } else {
+                            team2.push(player);
+                            strength2 += strength;
+                        }
+                    } else if (team1.length < 5) {
+                        team1.push(player);
+                        strength1 += strength;
+                    } else if (team2.length < 5) {
                         team2.push(player);
                         strength2 += strength;
                     }
-                } else if (team1.length < 5) {
-                    team1.push(player);
-                    strength1 += strength;
-                } else if (team2.length < 5) {
-                    team2.push(player);
-                    strength2 += strength;
                 }
-            }
 
-            // Then assign remaining players as substitutes to balance teams
-            const team1Subs = [];
-            const team2Subs = [];
-            
-            for (let i = 10; i < sortedPlayers.length; i++) {
-                const { player, strength } = sortedPlayers[i];
+                // Remaining as substitutes
+                const team1Subs = [];
+                const team2Subs = [];
                 
-                // Add to the team with lower total strength (including subs)
-                if (strength1 <= strength2) {
-                    team1Subs.push(player);
-                    strength1 += strength;
-                } else {
-                    team2Subs.push(player);
-                    strength2 += strength;
+                for (let i = 10; i < sortedPlayers.length; i++) {
+                    const { player, strength } = sortedPlayers[i];
+                    
+                    if (strength1 <= strength2) {
+                        team1Subs.push(player);
+                        strength1 += strength;
+                    } else {
+                        team2Subs.push(player);
+                        strength2 += strength;
+                    }
                 }
-            }
 
-            // Save teams to Firebase with substitutes
-            saveTeamsToFirebase(team1, team2, team1Subs, team2Subs);
-            
-            // Display teams on field with their subs
-            displayTeamsOnField(team1, team2, team1Subs, team2Subs);
+                saveTeamsToFirebase(team1, team2, team1Subs, team2Subs);
+                displayTeamsOnField(team1, team2, team1Subs, team2Subs);
+            }
         }
         
         // Save generated teams to Firebase
-        async function saveTeamsToFirebase(team1, team2, team1Subs = [], team2Subs = []) {
+        async function saveTeamsToFirebase(team1, team2, team1Subs = [], team2Subs = [], team3 = [], sharedSubs = []) {
             const gameId = window.teamGenGameId;
             if (!gameId || !window.firebaseInitialized) return;
             
             try {
                 const gameRef = window.firebase.doc(window.firebase.db, 'scheduledGames', gameId);
-                await window.firebase.updateDoc(gameRef, {
+                const updateData = {
                     'generatedTeams.team1': team1.map(p => p.name),
                     'generatedTeams.team2': team2.map(p => p.name),
                     'generatedTeams.team1Subs': team1Subs.map(p => p.name),
                     'generatedTeams.team2Subs': team2Subs.map(p => p.name),
                     'generatedTeams.timestamp': new Date().toISOString()
-                });
+                };
+                
+                if (team3.length > 0) {
+                    updateData['generatedTeams.team3'] = team3.map(p => p.name);
+                    updateData['generatedTeams.sharedSubs'] = sharedSubs.map(p => p.name);
+                    updateData['generatedTeams.startingMatch'] = null; // Will be set by admin
+                }
+                
+                await window.firebase.updateDoc(gameRef, updateData);
                 console.log('Teams saved to Firebase successfully');
             } catch (error) {
                 console.error('Error saving teams:', error);
             }
         }
 
-        function displayTeamsOnField(team1, team2, team1Subs = [], team2Subs = []) {
+        function displayTeamsOnField(team1, team2, team1Subs = [], team2Subs = [], team3 = []) {
             // Show the field
             document.getElementById('footballField').classList.remove('hidden');
+            
+            // Admin-only match selector toggle (do not interfere with field rendering)
+            const has3Teams = team3.length > 0;
+            const matchSelector = document.getElementById('matchSelector');
+            if (matchSelector) {
+                const isAdmin = currentUser && currentUser.isAdmin;
+                if (has3Teams && isAdmin) {
+                    matchSelector.classList.remove('hidden');
+                } else {
+                    matchSelector.classList.add('hidden');
+                }
+            }
+            // ...existing code for team3Container and teamListsContainer...
+            const team3Container = document.getElementById('team3Container');
+            const teamListsContainer = document.getElementById('teamListsContainer');
+            if (has3Teams) {
+                team3Container.classList.remove('hidden');
+                teamListsContainer.classList.remove('md:grid-cols-2');
+                teamListsContainer.classList.add('md:grid-cols-3');
+            } else {
+                team3Container.classList.add('hidden');
+                teamListsContainer.classList.remove('md:grid-cols-3');
+                teamListsContainer.classList.add('md:grid-cols-2');
+            }
 
             // Assign positions (GK, 2xDEF, MID, FWD) - reversed order for top-to-bottom
             const positions = ['fwd', 'mid', 'def', 'def', 'gk'];
@@ -3220,19 +3344,28 @@
             });
 
             // Store teams globally for admin controls
-            window.currentTeam1 = team1;
-            window.currentTeam2 = team2;
-            window.currentTeam1Subs = team1Subs;
-            window.currentTeam2Subs = team2Subs;
+            window.currentTeam1 = window.fullTeam1 || team1;
+            window.currentTeam2 = window.fullTeam2 || team2;
+            window.currentTeam3 = window.fullTeam3 || team3;
+            window.currentTeam1Subs = window.fullTeam1Subs || team1Subs;
+            window.currentTeam2Subs = window.fullTeam2Subs || team2Subs;
 
-            // Display full team lists
+            // Always use the full teams for the lists
             const team1List = document.getElementById('team1List');
             const team2List = document.getElementById('team2List');
+            const team3List = document.getElementById('team3List');
             const isAdmin = currentUser && currentUser.isAdmin;
-            
+
+            // Use the full teams if available, otherwise fall back to current
+            const allTeam1 = window.fullTeam1 || team1;
+            const allTeam2 = window.fullTeam2 || team2;
+            const allTeam3 = window.fullTeam3 || team3;
+            const allTeam1Subs = window.fullTeam1Subs || team1Subs;
+            const allTeam2Subs = window.fullTeam2Subs || team2Subs;
+
             if (team1List) {
-                const allTeam1 = [...team1, ...team1Subs];
-                team1List.innerHTML = allTeam1.map((p, idx) => {
+                const list = [...allTeam1, ...allTeam1Subs];
+                team1List.innerHTML = list.map((p, idx) => {
                     const isStarter = idx < 5;
                     return `
                     <div class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg ${!isStarter ? 'opacity-75 border-l-4 border-blue-300' : ''}">
@@ -3250,6 +3383,66 @@
                                 </button>
                                 <button onclick="movePlayerToTeam('${p.name}', 1, 2)" class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors" title="Move to Team 2">
                                     →
+                                </button>
+                                ${allTeam3 && allTeam3.length > 0 ? `
+                                <button onclick="movePlayerToTeam('${p.name}', 1, 3)" class="text-xs px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors" title="Move to Team 3">
+                                    ↘
+                                </button>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `}).join('');
+            }
+            if (team2List) {
+                const list = [...allTeam2, ...allTeam2Subs];
+                team2List.innerHTML = list.map((p, idx) => {
+                    const isStarter = idx < 5;
+                    return `
+                    <div class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg ${!isStarter ? 'opacity-75 border-l-4 border-red-300' : ''}">
+                        <img src="${p.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" 
+                             alt="${p.name}" class="w-10 h-10 rounded-full object-cover">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">${isStarter ? (positions[idx]?.toUpperCase() || 'PLAYER') : 'SUB'} • Lv${calculateLevel(p.xp || 0)}</div>
+                        </div>
+                        <div class="text-sm text-red-600 dark:text-red-400 font-bold">${getWinPercentage(p)}%</div>
+                        ${isAdmin ? `
+                            <div class="flex gap-1">
+                                <button onclick="swapPlayerFieldBench('${p.name}', 2)" class="text-xs px-2 py-1 ${isStarter ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors" title="${isStarter ? 'Send to Bench' : 'Put on Field'}">
+                                    ${isStarter ? '🪑' : '⚽'}
+                                </button>
+                                <button onclick="movePlayerToTeam('${p.name}', 2, 1)" class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors" title="Move to Team 1">
+                                    ←
+                                </button>
+                                ${allTeam3 && allTeam3.length > 0 ? `
+                                <button onclick="movePlayerToTeam('${p.name}', 2, 3)" class="text-xs px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors" title="Move to Team 3">
+                                    ↙
+                                </button>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `}).join('');
+            }
+            if (team3List && allTeam3 && allTeam3.length > 0) {
+                team3List.innerHTML = allTeam3.map((p, idx) => {
+                    return `
+                    <div class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg">
+                        <img src="${p.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" 
+                             alt="${p.name}" class="w-10 h-10 rounded-full object-cover">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">${positions[idx]?.toUpperCase() || 'PLAYER'} • Lv${calculateLevel(p.xp || 0)}</div>
+                        </div>
+                        <div class="text-sm text-green-600 dark:text-green-400 font-bold">${getWinPercentage(p)}%</div>
+                        ${isAdmin ? `
+                            <div class="flex gap-1">
+                                <button onclick="movePlayerToTeam('${p.name}', 3, 1)" class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors" title="Move to Team 1">
+                                    ↖
+                                </button>
+                                <button onclick="movePlayerToTeam('${p.name}', 3, 2)" class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors" title="Move to Team 2">
+                                    ↗
                                 </button>
                             </div>
                         ` : ''}
@@ -3278,6 +3471,37 @@
                                 <button onclick="movePlayerToTeam('${p.name}', 2, 1)" class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors" title="Move to Team 1">
                                     ←
                                 </button>
+                                ${window.currentTeam3 && window.currentTeam3.length > 0 ? `
+                                <button onclick="movePlayerToTeam('${p.name}', 2, 3)" class="text-xs px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors" title="Move to Team 3">
+                                    ↙
+                                </button>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `}).join('');
+            }
+
+            // Display Team 3 list
+            if (team3List && team3.length > 0) {
+                team3List.innerHTML = team3.map((p, idx) => {
+                    return `
+                    <div class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg">
+                        <img src="${p.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" 
+                             alt="${p.name}" class="w-10 h-10 rounded-full object-cover">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">${positions[idx]?.toUpperCase() || 'PLAYER'} • Lv${calculateLevel(p.xp || 0)}</div>
+                        </div>
+                        <div class="text-sm text-green-600 dark:text-green-400 font-bold">${getWinPercentage(p)}%</div>
+                        ${isAdmin ? `
+                            <div class="flex gap-1">
+                                <button onclick="movePlayerToTeam('${p.name}', 3, 1)" class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors" title="Move to Team 1">
+                                    ↖
+                                </button>
+                                <button onclick="movePlayerToTeam('${p.name}', 3, 2)" class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors" title="Move to Team 2">
+                                    ↗
+                                </button>
                             </div>
                         ` : ''}
                     </div>
@@ -3292,6 +3516,151 @@
 
             // Scroll to field
             document.getElementById('footballField').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Set which teams will play first (for 3-team mode)
+        async function setStartingMatch(teamA, teamB) {
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('Only admins can set the starting match');
+                return;
+            }
+
+            const gameId = window.teamGenGameId;
+            if (!gameId || !window.firebaseInitialized) return;
+
+            // Get the teams from the current display
+            const allTeams = {
+                1: window.currentTeam1 || [],
+                2: window.currentTeam2 || [],
+                3: window.currentTeam3 || []
+            };
+
+            const playingTeamA = allTeams[teamA];
+            const playingTeamB = allTeams[teamB];
+            
+            if (!playingTeamA || !playingTeamB) {
+                alert('Error: Teams not found');
+                return;
+            }
+
+            // Update the field to show the selected teams
+            // Clear all positions first
+            ['team1', 'team2'].forEach(teamPrefix => {
+                ['gk', 'fwd', 'mid', 'def'].forEach(pos => {
+                    const elem = document.getElementById(`${teamPrefix}-${pos}`);
+                    if (elem) {
+                        const circles = elem.querySelectorAll('.rounded-full');
+                        circles.forEach(circle => {
+                            const isGK = pos === 'gk';
+                            const isTeam1 = teamPrefix === 'team1';
+                            const borderColor = isGK ? 'border-yellow-400' : (isTeam1 ? 'border-blue-400' : 'border-red-400');
+                            const bgColor = isGK ? 'bg-yellow-500' : (isTeam1 ? 'bg-blue-500' : 'bg-red-500');
+                            const posLabel = pos.toUpperCase();
+                            
+                            circle.innerHTML = `<div class="w-full h-full ${bgColor} flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">${posLabel}</div>`;
+                            circle.className = `w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 sm:border-4 ${borderColor} shadow-xl sm:shadow-2xl bg-gray-200`;
+                            circle.onclick = null;
+                        });
+                    }
+                });
+            });
+
+            // Update team badges
+            const team1Badge = document.querySelector('#footballField .absolute.top-3');
+            const team2Badge = document.querySelector('#footballField .absolute.bottom-3');
+            
+            if (team1Badge) {
+                const colors = { 1: 'blue', 2: 'red', 3: 'green' };
+                const emojis = { 1: '🔵', 2: '🔴', 3: '🟢' };
+                team1Badge.className = `absolute top-3 sm:top-4 left-4 sm:left-6 bg-${colors[teamA]}-600/80 backdrop-blur-sm px-3 sm:px-6 py-1 sm:py-2 rounded-full shadow-lg z-10`;
+                team1Badge.innerHTML = `<h3 class="text-white font-bold text-sm sm:text-lg drop-shadow-lg">${emojis[teamA]} Team ${teamA}</h3>`;
+            }
+            
+            if (team2Badge) {
+                const colors = { 1: 'blue', 2: 'red', 3: 'green' };
+                const emojis = { 1: '🔵', 2: '🔴', 3: '🟢' };
+                team2Badge.className = `absolute bottom-3 sm:bottom-4 right-4 sm:right-6 bg-${colors[teamB]}-600/80 backdrop-blur-sm px-3 sm:px-6 py-1 sm:py-2 rounded-full shadow-lg z-10`;
+                team2Badge.innerHTML = `<h3 class="text-white font-bold text-sm sm:text-lg drop-shadow-lg">${emojis[teamB]} Team ${teamB}</h3>`;
+            }
+
+            // Display the selected teams on the field
+            const positions = ['fwd', 'mid', 'def', 'def', 'gk'];
+            
+            playingTeamA.slice(0, 5).forEach((player, idx) => {
+                const pos = positions[idx];
+                const elem = document.getElementById(`team1-${pos}`);
+                if (elem) {
+                    let circles = elem.querySelectorAll('.rounded-full');
+                    if (pos === 'def') {
+                        circles = Array.from(circles);
+                        const defIndex = idx - 2;
+                        const circle = circles[defIndex];
+                        if (circle) {
+                            const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name);
+                            circle.innerHTML = `<img src="${photoUrl}" alt="${player.name}" class="w-full h-full object-cover" title="${player.name}">`;
+                            circle.classList.remove('bg-gray-200');
+                            circle.classList.add('cursor-pointer', 'hover:scale-110', 'transition-transform');
+                            circle.onclick = () => showPlayerProfile(player.id);
+                        }
+                    } else {
+                        const circle = circles[0];
+                        if (circle) {
+                            const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name);
+                            circle.innerHTML = `<img src="${photoUrl}" alt="${player.name}" class="w-full h-full object-cover" title="${player.name}">`;
+                            circle.classList.remove('bg-gray-200');
+                            circle.classList.add('cursor-pointer', 'hover:scale-110', 'transition-transform');
+                            circle.onclick = () => showPlayerProfile(player.id);
+                            if (pos === 'gk') {
+                                circle.classList.add('border-yellow-400');
+                            }
+                        }
+                    }
+                }
+            });
+
+            playingTeamB.slice(0, 5).forEach((player, idx) => {
+                const pos = positions[idx];
+                const elem = document.getElementById(`team2-${pos}`);
+                if (elem) {
+                    let circles = elem.querySelectorAll('.rounded-full');
+                    if (pos === 'def') {
+                        circles = Array.from(circles);
+                        const defIndex = idx - 2;
+                        const circle = circles[defIndex];
+                        if (circle) {
+                            const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name);
+                            circle.innerHTML = `<img src="${photoUrl}" alt="${player.name}" class="w-full h-full object-cover" title="${player.name}">`;
+                            circle.classList.remove('bg-gray-200');
+                            circle.classList.add('cursor-pointer', 'hover:scale-110', 'transition-transform');
+                            circle.onclick = () => showPlayerProfile(player.id);
+                        }
+                    } else {
+                        const circle = circles[0];
+                        if (circle) {
+                            const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name);
+                            circle.innerHTML = `<img src="${photoUrl}" alt="${player.name}" class="w-full h-full object-cover" title="${player.name}">`;
+                            circle.classList.remove('bg-gray-200');
+                            circle.classList.add('cursor-pointer', 'hover:scale-110', 'transition-transform');
+                            circle.onclick = () => showPlayerProfile(player.id);
+                            if (pos === 'gk') {
+                                circle.classList.add('border-yellow-400');
+                            }
+                        }
+                    }
+                }
+            });
+
+            try {
+                const gameRef = window.firebase.doc(window.firebase.db, 'scheduledGames', gameId);
+                await window.firebase.updateDoc(gameRef, {
+                    'generatedTeams.startingMatch': { teamA, teamB }
+                });
+                
+                alert(`Match set: Team ${teamA} vs Team ${teamB} will play first!`);
+                console.log(`Starting match: Team ${teamA} vs Team ${teamB}`);
+            } catch (error) {
+                console.error('Error setting starting match:', error);
+            }
         }
 
         // Move player from one team to another
@@ -3373,45 +3742,57 @@
                 return;
             }
 
+
             let team1 = [...window.currentTeam1];
             let team2 = [...window.currentTeam2];
+            let team3 = [...(window.currentTeam3 || [])];
             let team1Subs = [...window.currentTeam1Subs];
             let team2Subs = [...window.currentTeam2Subs];
-            
-            // Find and remove player from source team (including subs)
-            if (fromTeam === 1) {
-                let idx = team1.findIndex(p => p.name === playerName);
-                if (idx !== -1) {
-                    const player = team1.splice(idx, 1)[0];
-                    team2.push(player);
-                } else {
-                    idx = team1Subs.findIndex(p => p.name === playerName);
-                    if (idx !== -1) {
-                        const player = team1Subs.splice(idx, 1)[0];
-                        team2Subs.push(player);
-                    }
-                }
-            } else {
-                let idx = team2.findIndex(p => p.name === playerName);
-                if (idx !== -1) {
-                    const player = team2.splice(idx, 1)[0];
+
+            // Remove player from all teams and benches
+            function removePlayerFromAll(playerName) {
+                [team1, team2, team3, team1Subs, team2Subs].forEach(arr => {
+                    const idx = arr.findIndex(p => p.name === playerName);
+                    if (idx !== -1) arr.splice(idx, 1);
+                });
+            }
+
+            // Find player object
+            let player = null;
+            [team1, team2, team3, team1Subs, team2Subs].forEach(arr => {
+                const found = arr.find(p => p.name === playerName);
+                if (found) player = found;
+            });
+            if (!player) return;
+
+            // Remove from all teams/benches first
+            removePlayerFromAll(playerName);
+
+            // Add to destination
+            if (toTeam === 1) {
+                if (team1.length < 5) {
                     team1.push(player);
                 } else {
-                    idx = team2Subs.findIndex(p => p.name === playerName);
-                    if (idx !== -1) {
-                        const player = team2Subs.splice(idx, 1)[0];
-                        team1Subs.push(player);
-                    }
+                    team1Subs.push(player);
                 }
+            } else if (toTeam === 2) {
+                if (team2.length < 5) {
+                    team2.push(player);
+                } else {
+                    team2Subs.push(player);
+                }
+            } else if (toTeam === 3) {
+                team3.push(player);
             }
 
             // Update display and save
             window.currentTeam1 = team1;
             window.currentTeam2 = team2;
+            window.currentTeam3 = team3;
             window.currentTeam1Subs = team1Subs;
             window.currentTeam2Subs = team2Subs;
-            displayTeamsOnField(team1, team2, team1Subs, team2Subs);
-            await saveTeamsToFirebase(team1, team2, team1Subs, team2Subs);
+            displayTeamsOnField(team1, team2, team1Subs, team2Subs, team3);
+            await saveTeamsToFirebase(team1, team2, team1Subs, team2Subs, team3);
         }
 
         function updateCalendarDisplay() {
@@ -3433,12 +3814,16 @@
                 return;
             }
 
-            // Filter out past games
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+
+            // Filter out games whose date and time are in the past
+            const now = new Date();
             const upcomingGames = scheduledGames.filter(game => {
-                const gameDate = new Date(game.date);
-                return gameDate >= today;
+                if (!game.date || !game.time) return true;
+                // Combine date and time into a single Date object
+                const [year, month, day] = game.date.split('-').map(Number);
+                const [hour, minute] = game.time.split(':').map(Number);
+                const gameDateTime = new Date(year, month - 1, day, hour, minute);
+                return gameDateTime >= now;
             });
 
             if (upcomingGames.length === 0) {
