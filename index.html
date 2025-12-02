@@ -219,6 +219,9 @@
                 <button onclick="switchDashboardTab('lastGame')" id="tab-lastGame" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
                     🏟️ Last Game
                 </button>
+                <button onclick="switchDashboardTab('allGames')" id="tab-allGames" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
+                    📚 All Games
+                </button>
             </div>
 
             <!-- Tab Content -->
@@ -303,6 +306,19 @@
                     </div>
                     <div id="recentGames">
                         <p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">No games yet! Add your first game above. 🎯</p>
+                    </div>
+                </div>
+
+                <!-- All Games Tab -->
+                <div id="content-allGames" class="dashboard-content hidden">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg">
+                            <span class="text-white text-2xl">📚</span>
+                        </div>
+                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">All Games</h3>
+                    </div>
+                    <div id="allGamesList">
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">Loading games... 🔄</p>
                     </div>
                 </div>
             </div>
@@ -443,6 +459,8 @@
                     <div>
                         <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">⏰ Time:</label>
                         <input type="time" id="scheduledTime" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300 mt-4">⏳ End Time:</label>
+                        <input type="time" id="scheduledEndTime" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
 
                     <div>
@@ -782,6 +800,7 @@
         // Gamification System
         const ACHIEVEMENTS = {
             HAT_TRICK: { id: 'hat_trick', name: 'Hat-trick Hero', icon: '🎩⚽', description: 'Score 3+ goals in a single game', xp: 100 },
+            ASSIST_HERO: { id: 'assist_hero', name: 'Assist Hero', icon: '🎯🅰️', description: 'Make 3+ assists in a single game', xp: 100 },
             ASSIST_KING: { id: 'assist_king', name: 'Assist King', icon: '👑🅰️', description: 'Make 5+ assists in total', xp: 40 },
             IRON_MAN: { id: 'iron_man', name: 'Iron Man', icon: '💪', description: 'Play 10 games', xp: 50 },
             FIRST_BLOOD: { id: 'first_blood', name: 'First Blood', icon: '🎯', description: 'Score your first goal', xp: 30 },
@@ -958,7 +977,18 @@
                 
                 const unsubPlayers = window.firebase.onSnapshot(playersQuery, 
                     (snapshot) => {
-                        players = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                        players = snapshot.docs.map(doc => {
+                            const data = doc.data();
+                            // Ensure achievements and milestones arrays exist
+                            return {
+                                ...data,
+                                id: doc.id,
+                                achievements: data.achievements || [],
+                                milestonesReached: data.milestonesReached || [],
+                                xp: data.xp || 0,
+                                potmAwards: data.potmAwards || 0
+                            };
+                        });
                         
                         // Re-check for linked player if user is logged in
                         if (currentUser && currentUser.email && !currentUser.linkedPlayer) {
@@ -989,7 +1019,6 @@
                     (snapshot) => {
                         const previousGames = [...scheduledGames];
                         scheduledGames = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-                        console.log('Scheduled games updated:', scheduledGames.length, 'games', scheduledGames);
                         
                         // Detect new scheduled games
                         if (previousGames.length > 0) {
@@ -1081,7 +1110,6 @@
                 const unsubNotifications = window.firebase.onSnapshot(notificationsQuery,
                     (snapshot) => {
                         notifications = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-                        console.log('Notifications updated:', notifications.length, 'notifications');
                         updateNotificationBadge();
                         updateNotificationsList();
                     },
@@ -1264,16 +1292,13 @@
 
 
         function saveToLocalStorage() {
-            localStorage.setItem('footable-games', JSON.stringify(games));
-            localStorage.setItem('footable-players', JSON.stringify(players));
-            localStorage.setItem('footable-users', JSON.stringify(users));
+            // Only save currentUser session to localStorage
             localStorage.setItem('footable-currentUser', JSON.stringify(currentUser));
         }
 
         function loadFromLocalStorage() {
-            games = JSON.parse(localStorage.getItem('footable-games') || '[]');
-            players = JSON.parse(localStorage.getItem('footable-players') || '[]');
-            users = JSON.parse(localStorage.getItem('footable-users') || '[]');
+            // Only load currentUser session from localStorage
+            // games and players are loaded from Firestore via listeners
             currentUser = JSON.parse(localStorage.getItem('footable-currentUser') || 'null');
         }
 
@@ -1287,7 +1312,7 @@
                     isAdmin: true,
                     createdAt: new Date().toISOString()
                 });
-                saveToLocalStorage();
+                // Users are managed in Firestore, not localStorage
             }
         }
 
@@ -1301,17 +1326,12 @@
                 // Reset XP to recalculate from scratch
                 let totalXp = 0;
                 
-                // Base XP from games played (5 XP per game)
-                totalXp += (player.gamesPlayed || 0) * 5;
-                
-                // Bonus XP from wins (10 XP per win)
-                totalXp += (player.wins || 0) * 10;
-                
-                // XP from goals (5 XP per goal)
-                totalXp += (player.goals || 0) * 5;
-                
-                // XP from assists (3 XP per assist)
-                totalXp += (player.assists || 0) * 3;
+                // New XP formula: 1 goal = 1 assist = 1 win = 10 XP
+                const XP_PER = 10;
+                totalXp += (player.gamesPlayed || 0) * XP_PER;
+                totalXp += (player.wins || 0) * XP_PER;
+                totalXp += (player.goals || 0) * XP_PER;
+                totalXp += (player.assists || 0) * XP_PER;
                 
                 // Check and award achievements (only count once)
                 const newAchievements = [];
@@ -1326,10 +1346,28 @@
                         }
                     }
                 });
+                
                 if (hasHatTrick && !player.achievements.includes('hat_trick')) {
                     player.achievements.push('hat_trick');
                     totalXp += ACHIEVEMENTS.HAT_TRICK.xp;
                     newAchievements.push('hat_trick');
+                }
+                
+                // Assist Hero - 3+ assists in a game
+                let hasAssistHero = false;
+                games.forEach(game => {
+                    if (game.playerStats && game.playerStats[player.name]) {
+                        const stats = game.playerStats[player.name];
+                        if (stats.assists >= 3) {
+                            hasAssistHero = true;
+                        }
+                    }
+                });
+                
+                if (hasAssistHero && !player.achievements.includes('assist_hero')) {
+                    player.achievements.push('assist_hero');
+                    totalXp += ACHIEVEMENTS.ASSIST_HERO.xp;
+                    newAchievements.push('assist_hero');
                 }
                 
                 // First Blood
@@ -1419,7 +1457,7 @@
                 
                 player.xp = totalXp;
                 
-                // Always update in Firebase to ensure XP is saved
+                // Update in Firebase only if called explicitly (not on every page load)
                 FirebaseService.updatePlayer(player);
             });
             
@@ -1429,8 +1467,8 @@
         function getLastPlayerOfTheMatch() {
             if (games.length === 0) return null;
             
-            // Get the most recent game
-            const lastGame = games[games.length - 1];
+            // Get the most recent game (games are ordered by date desc)
+            const lastGame = games[0];
             
             // Check if there's a manually selected Player of the Match
             if (lastGame.playerOfTheMatch) {
@@ -1486,20 +1524,30 @@
             const now = new Date();
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
-            const currentDay = now.getDate();
-            const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-            const isLastDay = currentDay === lastDayOfMonth;
             
-            // Filter games from current month
+            // Check if we're in the first 3 days of a new month (showing last month's winner)
+            const currentDay = now.getDate();
+            const isAnnouncement = currentDay <= 3;
+            
+            // If announcement period, show previous month's data
+            let targetMonth = currentMonth;
+            let targetYear = currentYear;
+            
+            if (isAnnouncement) {
+                targetMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+                targetYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+            }
+            
+            // Filter games from target month
             const monthGames = games.filter(game => {
                 const gameDate = new Date(game.date);
-                return gameDate.getMonth() === currentMonth && gameDate.getFullYear() === currentYear;
+                return gameDate.getMonth() === targetMonth && gameDate.getFullYear() === targetYear;
             });
             
             if (monthGames.length === 0) return null;
             
             // Calculate points for each player this month
-            // Formula: (goals * 3) + (assists * 2) + (wins * 1)
+            // New Formula focused on individual stats: (goals * 5) + (assists * 3) + (games_played * 1)
             const playerScores = {};
             
             monthGames.forEach(game => {
@@ -1507,8 +1555,18 @@
                 
                 allPlayers.forEach(playerName => {
                     if (!playerScores[playerName]) {
-                        playerScores[playerName] = { goals: 0, assists: 0, wins: 0, total: 0 };
+                        playerScores[playerName] = { 
+                            goals: 0, 
+                            assists: 0, 
+                            gamesPlayed: 0, 
+                            wins: 0,
+                            potm: 0,
+                            total: 0 
+                        };
                     }
+                    
+                    // Count games played
+                    playerScores[playerName].gamesPlayed++;
                     
                     // Add goals and assists
                     if (game.playerStats && game.playerStats[playerName]) {
@@ -1516,30 +1574,53 @@
                         playerScores[playerName].assists += game.playerStats[playerName].assists || 0;
                     }
                     
-                    // Add win
+                    // Track wins (for display, not main scoring)
                     if ((game.team1.includes(playerName) && game.score1 > game.score2) ||
                         (game.team2.includes(playerName) && game.score2 > game.score1)) {
                         playerScores[playerName].wins++;
                     }
+                    
+                    // Track Player of the Match awards (bonus points)
+                    if (game.playerOfTheMatch === playerName) {
+                        playerScores[playerName].potm++;
+                    }
                 });
             });
             
-            // Calculate total scores
+            // Calculate total scores with new formula
             Object.keys(playerScores).forEach(playerName => {
                 const scores = playerScores[playerName];
-                scores.total = (scores.goals * 3) + (scores.assists * 2) + (scores.wins * 1);
+                // Individual performance focused: goals (5pts), assists (3pts), POTM (10pts), participation (1pt)
+                scores.total = (scores.goals * 5) + 
+                              (scores.assists * 3) + 
+                              (scores.potm * 10) + 
+                              (scores.gamesPlayed * 1);
             });
             
-            // Sort players by score
+            // Sort players by total score (individual stats based)
             const sortedPlayers = Object.entries(playerScores)
                 .map(([playerName, scores]) => ({ name: playerName, ...scores }))
-                .sort((a, b) => b.total - a.total);
+                .sort((a, b) => {
+                    // Primary: Total score
+                    if (b.total !== a.total) return b.total - a.total;
+                    // Tiebreaker 1: Goals
+                    if (b.goals !== a.goals) return b.goals - a.goals;
+                    // Tiebreaker 2: Assists
+                    if (b.assists !== a.assists) return b.assists - a.assists;
+                    // Tiebreaker 3: POTM awards
+                    return b.potm - a.potm;
+                });
             
-            // Return winner only on last day of month, otherwise return top 3
+            const monthName = new Date(targetYear, targetMonth).toLocaleString('default', { month: 'long' });
+            
+            // Return winner during announcement period, otherwise return top 3 contenders
             return {
-                isLastDay,
-                winner: isLastDay ? sortedPlayers[0] : null,
-                topContenders: !isLastDay ? sortedPlayers.slice(0, 3) : []
+                isAnnouncement,
+                monthName,
+                targetMonth,
+                targetYear,
+                winner: isAnnouncement ? sortedPlayers[0] : null,
+                topContenders: !isAnnouncement ? sortedPlayers.slice(0, 3) : []
             };
         }
 
@@ -1568,15 +1649,17 @@
                 displayAllPlayers();
             } else if (tabName === 'teamGenerator') {
                 displayTeamGenerator();
+            } else if (tabName === 'allGames') {
+                displayAllGamesTab();
             }
         }
 
         function updateDisplay() {
-            // Update last game
+            // Update last game (games are ordered by date desc, so most recent is at index 0)
             const recentGamesHTML = games.length === 0 
                 ? '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No games yet! Add your first game above. 🎯</p>'
-                : games.slice(-1).map((game, index) => `
-                    <div onclick="showGameDetails(${games.length - 1 - index})" class="p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300 hover:shadow-lg dark:hover:shadow-gray-900/20 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 cursor-pointer">
+                : games.slice(0, 1).map((game, index) => `
+                    <div onclick="showGameDetails(${index})" class="p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300 hover:shadow-lg dark:hover:shadow-gray-900/20 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 cursor-pointer">
                         <div class="flex flex-wrap justify-between text-sm text-gray-500 dark:text-gray-400 mb-4 gap-2">
                             <span class="flex items-center gap-2 font-medium">📅 ${game.date}</span>
                             <span class="flex items-center gap-2 font-medium">📍 ${game.location}</span>
@@ -1612,28 +1695,37 @@
             const topPlayersHTML = players.length === 0
                 ? '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg">No player stats yet! 📊</p>'
                 : players.sort((a, b) => {
-                    const aWinRate = getWinPercentage(a);
-                    const bWinRate = getWinPercentage(b);
+                    // Calculate balanced score: goals (3pts) + assists (2pts) + wins (1pt) + draws (0.5pt)
+                    const aScore = ((a.goals || 0) * 3) + ((a.assists || 0) * 2) + ((a.wins || 0) * 1) + ((a.draws || 0) * 0.5);
+                    const bScore = ((b.goals || 0) * 3) + ((b.assists || 0) * 2) + ((b.wins || 0) * 1) + ((b.draws || 0) * 0.5);
                     
-                    if (aWinRate !== bWinRate) {
-                        return bWinRate - aWinRate;
+                    if (aScore !== bScore) {
+                        return bScore - aScore;
                     }
                     
+                    // Tiebreaker 1: Goals
                     const aGoals = a.goals || 0;
                     const bGoals = b.goals || 0;
-                    
                     if (aGoals !== bGoals) {
                         return bGoals - aGoals;
                     }
                     
+                    // Tiebreaker 2: Assists
                     const aAssists = a.assists || 0;
                     const bAssists = b.assists || 0;
-                    
                     if (aAssists !== bAssists) {
                         return bAssists - aAssists;
                     }
                     
-                    return b.gamesPlayed - a.gamesPlayed;
+                    // Tiebreaker 3: Win percentage
+                    const aWinRate = getWinPercentage(a);
+                    const bWinRate = getWinPercentage(b);
+                    if (aWinRate !== bWinRate) {
+                        return bWinRate - aWinRate;
+                    }
+                    
+                    // Final tiebreaker: Games played
+                    return (b.gamesPlayed || 0) - (a.gamesPlayed || 0);
                 }).slice(0, 5).map((player, index) => {
                     const xpProgress = getXpForNextLevel(player.xp || 0);
                     return `
@@ -1721,13 +1813,13 @@
             const potmContainer = document.getElementById('playerOfTheMonth');
             
             if (potmData) {
-                if (potmData.isLastDay && potmData.winner) {
-                    // Show winner on last day of month
+                if (potmData.isAnnouncement && potmData.winner) {
+                    // Show winner announcement for first 3 days of month
                     const potm = potmData.winner;
                     const topPlayer = players.find(p => p.name === potm.name);
                     
                     potmContainer.innerHTML = `
-                        <!-- Player of the Month Winner -->
+                        <!-- Player of the Month Winner Announcement -->
                         <div class="bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 rounded-xl p-6 shadow-lg">
                             <div class="text-center space-y-3">
                                 <div class="inline-block">
@@ -1739,7 +1831,7 @@
                                     }
                                 </div>
                                 <div>
-                                    <div class="text-xs font-semibold text-yellow-900/70 mb-1">🏆 PLAYER OF THE MONTH</div>
+                                    <div class="text-xs font-semibold text-yellow-900/70 mb-1">🏆 ${potmData.monthName.toUpperCase()} PLAYER OF THE MONTH</div>
                                     <div class="text-xl font-black text-yellow-900 mb-2">${potm.name}</div>
                                     <div class="flex justify-center gap-3 text-yellow-900">
                                         <div class="text-center">
@@ -1751,8 +1843,12 @@
                                             <div class="text-xs">Assists</div>
                                         </div>
                                         <div class="text-center">
-                                            <div class="text-xl font-bold">${potm.wins}</div>
-                                            <div class="text-xs">Wins</div>
+                                            <div class="text-xl font-bold">${potm.potmAwards || 0}</div>
+                                            <div class="text-xs">POTM</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-xl font-bold">${potm.gamesPlayed || 0}</div>
+                                            <div class="text-xs">Games</div>
                                         </div>
                                     </div>
                                     <div class="mt-2 text-sm text-yellow-900/80">
@@ -1766,7 +1862,7 @@
                     potmContainer.innerHTML = `
                         <div class="bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 rounded-xl p-6 shadow-lg">
                             <div class="text-center mb-4">
-                                <div class="text-xs font-semibold text-yellow-900/70 mb-1">🏆 PLAYER OF THE MONTH CONTENDERS</div>
+                                <div class="text-xs font-semibold text-yellow-900/70 mb-1">🏆 ${potmData.monthName.toUpperCase()} PLAYER OF THE MONTH CONTENDERS</div>
                             </div>
                             <div class="space-y-3">
                                 ${potmData.topContenders.map((contender, index) => {
@@ -1783,7 +1879,7 @@
                                         }
                                         <div class="flex-1 text-left">
                                             <div class="font-bold text-yellow-900">${contender.name}</div>
-                                            <div class="text-xs text-yellow-900/70">${contender.goals}G • ${contender.assists}A • ${contender.wins}W</div>
+                                            <div class="text-xs text-yellow-900/70">${contender.goals}G • ${contender.assists}A • ${contender.potmAwards || 0}POTM • ${contender.gamesPlayed || 0}GP</div>
                                         </div>
                                         <div class="text-right">
                                             <div class="font-bold text-lg text-yellow-900">${contender.total}</div>
@@ -2294,9 +2390,9 @@
                 player.goals = 0;
                 player.assists = 0;
                 player.potmAwards = 0;
-                // Don't reset achievements and milestones here - they'll be recalculated properly
-                if (!player.achievements) player.achievements = [];
-                if (!player.milestonesReached) player.milestonesReached = [];
+                // Reset achievements and milestones too so they're recalculated from scratch
+                player.achievements = [];
+                player.milestonesReached = [];
             });
             
             // Recalculate from all games
@@ -2338,10 +2434,14 @@
             // Recalculate XP and achievements (with new balanced values)
             recalculateAllPlayerXP();
             
-            // Update all players in Firebase
-            players.forEach(player => {
-                FirebaseService.updatePlayer(player);
-            });
+            // Update all players in Firebase (wait for all to complete)
+            Promise.all(players.map(player => FirebaseService.updatePlayer(player)))
+                .then(() => {
+                    console.log('All player stats rebuilt successfully');
+                })
+                .catch(error => {
+                    console.error('Error rebuilding player stats:', error);
+                });
         }
 
         async function login() {
@@ -2543,6 +2643,7 @@
             const time = document.getElementById('scheduledTime').value;
             const location = document.getElementById('scheduledLocation').value.trim();
             const notes = document.getElementById('scheduledNotes').value.trim();
+            const endTime = document.getElementById('scheduledEndTime').value;
 
             if (!date) {
                 alert('Please select a date');
@@ -2583,6 +2684,7 @@
                     {
                         date: date,
                         time: time,
+                        endTime: endTime || '',
                         location: location,
                         notes: notes || '',
                         availability: {},
@@ -3797,7 +3899,6 @@
 
         function updateCalendarDisplay() {
             const calendarView = document.getElementById('calendarView');
-            console.log('updateCalendarDisplay called, scheduledGames:', scheduledGames);
             
             if (!calendarView) {
                 console.error('Calendar view element not found!');
@@ -3815,15 +3916,33 @@
             }
 
 
+
             // Filter out games whose date and time are in the past
             const now = new Date();
-            const upcomingGames = scheduledGames.filter(game => {
+            let upcomingGames = scheduledGames.filter(game => {
                 if (!game.date || !game.time) return true;
-                // Combine date and time into a single Date object
+                // Combine date and end time into Date objects
                 const [year, month, day] = game.date.split('-').map(Number);
-                const [hour, minute] = game.time.split(':').map(Number);
-                const gameDateTime = new Date(year, month - 1, day, hour, minute);
-                return gameDateTime >= now;
+                const [startHour, startMinute] = game.time.split(':').map(Number);
+                let endHour = startHour, endMinute = startMinute;
+                if (game.endTime && /^\d{2}:\d{2}$/.test(game.endTime)) {
+                    [endHour, endMinute] = game.endTime.split(':').map(Number);
+                }
+                const gameEndDateTime = new Date(year, month - 1, day, endHour, endMinute);
+                return gameEndDateTime >= now;
+            });
+
+            // Sort upcomingGames by start date/time ascending
+            upcomingGames.sort((a, b) => {
+                if (!a.date || !a.time) return -1;
+                if (!b.date || !b.time) return 1;
+                const [aYear, aMonth, aDay] = a.date.split('-').map(Number);
+                const [aHour, aMinute] = a.time.split(':').map(Number);
+                const [bYear, bMonth, bDay] = b.date.split('-').map(Number);
+                const [bHour, bMinute] = b.time.split(':').map(Number);
+                const aStart = new Date(aYear, aMonth - 1, aDay, aHour, aMinute);
+                const bStart = new Date(bYear, bMonth - 1, bDay, bHour, bMinute);
+                return aStart - bStart;
             });
 
             if (upcomingGames.length === 0) {
@@ -3838,11 +3957,11 @@
                 const availableCount = Object.values(availability).filter(status => status === 'yes').length;
                 const noCount = Object.values(availability).filter(status => status === 'no').length;
                 const totalResponses = availableCount + noCount;
-                
+
                 // Get lists of players by status
                 const yesPlayers = Object.entries(availability).filter(([name, status]) => status === 'yes').map(([name]) => name);
                 const noPlayers = Object.entries(availability).filter(([name, status]) => status === 'no').map(([name]) => name);
-                
+
                 const currentPlayerStatus = linkedPlayer ? availability[linkedPlayer.name] : null;
                 
                 return `
@@ -3855,33 +3974,24 @@
                                     </div>
                                     <div>
                                         <h4 class="text-lg font-bold text-gray-900 dark:text-white">${formattedDate}</h4>
-                                        <p class="text-sm text-gray-600 dark:text-gray-400">⏰ ${game.time}</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">⏰ ${game.time}${game.endTime ? ' - ' + game.endTime : ''}</p>
                                     </div>
                                 </div>
+                                ${scoreEditHtml}
                                 <div class="space-y-2 text-sm">
                                     <p class="text-gray-700 dark:text-gray-300"><span class="font-semibold">📍 Location:</span> ${game.location}</p>
                                     ${game.notes ? `<p class="text-gray-600 dark:text-gray-400"><span class="font-semibold">📝 Notes:</span> ${game.notes}</p>` : ''}
                                 </div>
                             </div>
-                            
-                            ${currentUser && currentUser.isAdmin ? `
-                                <div class="flex flex-col gap-2 items-end">
-                                    <button onclick="sendGameNotification('${game.id}')" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg">
-                                        📢 Send Reminder
-                                    </button>
-                                    <button onclick="deleteScheduledGame('${game.id}')" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-all duration-200">
-                                        🗑️ Delete
-                                    </button>
-                                </div>
-                            ` : ''}
+                            ${adminControls}
                         </div>
 
+                        ${!isLive ? `
                         <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                             <div class="flex items-center justify-between mb-3">
                                 <h5 class="font-semibold text-gray-900 dark:text-white">Player Availability</h5>
                                 <span class="text-sm text-gray-600 dark:text-gray-400">${totalResponses} ${totalResponses === 1 ? 'response' : 'responses'}</span>
                             </div>
-                            
                             <div class="grid grid-cols-2 gap-3 mb-4">
                                 <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
                                     <div class="text-3xl font-bold text-green-600 dark:text-green-400">${availableCount}</div>
@@ -3892,7 +4002,6 @@
                                     <div class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1">❌ Not Available</div>
                                 </div>
                             </div>
-
                             ${currentUser && linkedPlayer ? `
                                 <div class="flex gap-3">
                                     <button onclick="markAvailability('${game.id}', 'yes')" class="flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${currentPlayerStatus === 'yes' ? 'bg-green-500 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/20'}">
@@ -3907,7 +4016,6 @@
                                     🔒 Please log in to mark your availability
                                 </p>
                             ` : ''}
-
                             ${totalResponses > 0 ? `
                                 <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     ${yesPlayers.length > 0 ? `
@@ -3937,6 +4045,7 @@
                                 </div>
                             ` : ''}
                         </div>
+                        ` : ''}
                     </div>
                 `;
             }).join('');
@@ -4020,9 +4129,12 @@
         function updateNotificationBadge() {
             const badge = document.getElementById('notificationBadge');
             
-            // Get user's last read timestamp from localStorage
+            // Get user's last read timestamp and dismissed notifications from localStorage
             const lastRead = parseInt(localStorage.getItem('footable-lastReadNotification') || '0');
-            const unreadCount = notifications.filter(n => n.timestamp > lastRead).length;
+            const dismissedNotifications = JSON.parse(localStorage.getItem('footable-dismissedNotifications') || '[]');
+            const unreadCount = notifications.filter(n => 
+                n.timestamp > lastRead && !dismissedNotifications.includes(n.id)
+            ).length;
             
             if (unreadCount > 0) {
                 badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
@@ -4035,14 +4147,18 @@
         function updateNotificationsList() {
             const list = document.getElementById('notificationsList');
             
-            if (notifications.length === 0) {
+            // Filter out dismissed notifications
+            const dismissedNotifications = JSON.parse(localStorage.getItem('footable-dismissedNotifications') || '[]');
+            const visibleNotifications = notifications.filter(n => !dismissedNotifications.includes(n.id));
+            
+            if (visibleNotifications.length === 0) {
                 list.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8">No notifications yet</p>';
                 return;
             }
             
             const lastRead = parseInt(localStorage.getItem('footable-lastReadNotification') || '0');
             
-            list.innerHTML = notifications.map(notif => {
+            list.innerHTML = visibleNotifications.map(notif => {
                 const timeAgo = getTimeAgo(notif.timestamp);
                 const icons = {
                     'game_scheduled': '📅',
@@ -4083,28 +4199,28 @@
             }
         }
 
-        async function clearAllNotifications() {
-            if (!confirm('Clear all notifications? This will clear them for everyone.')) {
-                return;
-            }
-            
-            if (!currentUser || !currentUser.isAdmin) {
-                alert('Only admins can clear all notifications');
+        function clearAllNotifications() {
+            if (!confirm('Clear all notifications for yourself?')) {
                 return;
             }
 
             try {
-                // Delete all notification documents
-                const batch = [];
-                for (const notif of notifications) {
-                    batch.push(
-                        window.firebase.deleteDoc(
-                            window.firebase.doc(window.firebase.db, 'notifications', notif.id)
-                        )
-                    );
-                }
-                await Promise.all(batch);
-                alert('All notifications cleared');
+                // Get current dismissed notifications or create new array
+                const dismissedNotifications = JSON.parse(localStorage.getItem('footable-dismissedNotifications') || '[]');
+                
+                // Add all current notification IDs to dismissed list
+                notifications.forEach(notif => {
+                    if (!dismissedNotifications.includes(notif.id)) {
+                        dismissedNotifications.push(notif.id);
+                    }
+                });
+                
+                // Save to localStorage
+                localStorage.setItem('footable-dismissedNotifications', JSON.stringify(dismissedNotifications));
+                
+                // Update the UI
+                updateNotificationsList();
+                updateNotificationBadge();
             } catch (error) {
                 console.error('Error clearing notifications:', error);
                 alert('Failed to clear notifications: ' + error.message);
@@ -4198,15 +4314,18 @@
                 if (currentUser.isAdmin) {
                     adminControls.classList.remove('hidden');
                     document.getElementById('scheduleGameBtn')?.classList.remove('hidden');
+                    document.getElementById('gamesHistoryBtn')?.classList.remove('hidden');
                 } else {
                     adminControls.classList.add('hidden');
                     document.getElementById('scheduleGameBtn')?.classList.add('hidden');
+                    document.getElementById('gamesHistoryBtn')?.classList.add('hidden');
                 }
             } else {
                 userInfo.innerHTML = '';
                 loginBtn.classList.remove('hidden');
                 adminControls.classList.add('hidden');
                 document.getElementById('scheduleGameBtn')?.classList.add('hidden');
+                document.getElementById('gamesHistoryBtn')?.classList.add('hidden');
             }
         }
 
@@ -4460,7 +4579,7 @@
             populatePlayersTable();
         }
 
-        function addGame() {
+        async function addGame() {
             const isEditMode = document.getElementById('gameModal').dataset.editMode === 'true';
             const editIndex = parseInt(document.getElementById('gameModal').dataset.editIndex);
             
@@ -4575,14 +4694,16 @@
                 };
 
                 // Use Firebase service to add game
-                FirebaseService.addGame(game);
-                
-                // Update player statistics
-                updatePlayerStats(game);
-                
-                updateDisplay();
-                hideAddGameModal();
-                alert('Game added successfully!');
+                try {
+                    await FirebaseService.addGame(game);
+                    // Update player statistics
+                    updatePlayerStats(game);
+                    updateDisplay();
+                    hideAddGameModal();
+                    alert('Game added successfully!');
+                } catch (error) {
+                    alert('Failed to add game: ' + (error?.message || error));
+                }
             }
         }
 
@@ -4835,12 +4956,12 @@
             const confirmDelete = confirm(`Are you sure you want to delete player "${player.name}"?\n\nThis will also remove all their game statistics.\n\nThis action cannot be undone.`);
             
             if (confirmDelete) {
-                // Remove player from array
+                // Remove player from array (Firestore listener will sync)
                 const playerIndex = players.findIndex(p => p.id == playerId);
                 if (playerIndex > -1) {
                     players.splice(playerIndex, 1);
                     
-                    saveToLocalStorage();
+                    // Players are synced via Firestore listeners
                     updateDisplay();
                     populatePlayersTable(); // Refresh the players table
                     alert(`Player "${player.name}" has been deleted successfully.`);
@@ -5042,6 +5163,13 @@
                 player.achievements.push('hat_trick');
                 totalXpGained += ACHIEVEMENTS.HAT_TRICK.xp;
                 newAchievements.push(ACHIEVEMENTS.HAT_TRICK);
+            }
+
+            // Assist Hero - 3+ assists in a game
+            if (stats.assists >= 3 && !player.achievements.includes('assist_hero')) {
+                player.achievements.push('assist_hero');
+                totalXpGained += ACHIEVEMENTS.ASSIST_HERO.xp;
+                newAchievements.push(ACHIEVEMENTS.ASSIST_HERO);
             }
 
             // First Blood - first goal ever
@@ -5248,27 +5376,223 @@
                         </div>
                     </div>
 
-                    <!-- Achievements Section -->
-                    ${player.achievements && player.achievements.length > 0 ? `
+                    <!-- Achievements & Milestones Section with Tabs -->
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
                         <h4 class="text-lg font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-                            <span>🏆</span> Achievements (${player.achievements.length})
+                            <span>🏆</span> Achievements & Milestones
                         </h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            ${player.achievements.map(achId => {
-                                const achievement = Object.values(ACHIEVEMENTS).find(a => a.id === achId);
-                                return achievement ? `
-                                    <div class="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg p-4 text-center shadow-lg transform hover:scale-105 transition-transform">
-                                        <div class="text-3xl mb-2">${achievement.icon}</div>
-                                        <div class="font-bold text-white text-sm">${achievement.name}</div>
-                                        <div class="text-xs text-white/80 mt-1">${achievement.description}</div>
-                                        <div class="text-xs text-white/90 font-semibold mt-2">+${achievement.xp} XP</div>
+                        
+                        <!-- Tab Navigation -->
+                        <div class="flex gap-2 mb-4 overflow-x-auto">
+                            <button onclick="switchProfileTab('achievements', '${player.id}')" id="profileTab-achievements-${player.id}" class="profile-tab active px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-md whitespace-nowrap">
+                                🏆 Achievements (${player.achievements ? player.achievements.length : 0})
+                            </button>
+                            <button onclick="switchProfileTab('milestones', '${player.id}')" id="profileTab-milestones-${player.id}" class="profile-tab px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500 whitespace-nowrap">
+                                🎯 Milestones (${player.milestonesReached ? player.milestonesReached.length : 0})
+                            </button>
+                            <button onclick="switchProfileTab('awards', '${player.id}')" id="profileTab-awards-${player.id}" class="profile-tab px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500 whitespace-nowrap">
+                                ⭐ Awards (${player.potmAwards || 0})
+                            </button>
+                        </div>
+                        
+                        <!-- Achievements Tab -->
+                        <div id="profileContent-achievements-${player.id}" class="profile-tab-content">
+                            ${player.achievements && player.achievements.length > 0 ? `
+                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                    ${player.achievements.map(achId => {
+                                        const achievement = Object.values(ACHIEVEMENTS).find(a => a.id === achId);
+                                        return achievement ? `
+                                            <div class="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg p-4 text-center shadow-lg transform hover:scale-105 transition-transform">
+                                                <div class="text-3xl mb-2">${achievement.icon}</div>
+                                                <div class="font-bold text-white text-sm">${achievement.name}</div>
+                                                <div class="text-xs text-white/80 mt-1">${achievement.description}</div>
+                                                <div class="text-xs text-white/90 font-semibold mt-2">+${achievement.xp} XP</div>
+                                            </div>
+                                        ` : '';
+                                    }).join('')}
+                                </div>
+                            ` : `
+                                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    <div class="text-4xl mb-2">🎯</div>
+                                    <p>No achievements unlocked yet</p>
+                                    <p class="text-sm mt-1">Keep playing to unlock achievements!</p>
+                                </div>
+                            `}
+                        </div>
+                        
+                        <!-- Milestones Tab -->
+                        <div id="profileContent-milestones-${player.id}" class="profile-tab-content hidden">
+                            ${player.milestonesReached && player.milestonesReached.length > 0 ? `
+                                <div class="space-y-3">
+                                    ${player.milestonesReached.map(milestoneId => {
+                                        const milestone = MILESTONES.find(m => {
+                                            const key = Object.keys(m).find(k => k !== 'message' && k !== 'xp');
+                                            return key + '_' + m[key] === milestoneId;
+                                        });
+                                        if (!milestone) return '';
+                                        
+                                        const key = Object.keys(milestone).find(k => k !== 'message' && k !== 'xp');
+                                        const value = milestone[key];
+                                        const icons = { goals: '⚽', assists: '🅰️', games: '🎮' };
+                                        
+                                        return '<div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-4 text-white shadow-lg">' +
+                                            '<div class="flex items-center justify-between">' +
+                                                '<div class="flex items-center gap-3">' +
+                                                    '<div class="text-3xl">' + (icons[key] || '🎯') + '</div>' +
+                                                    '<div>' +
+                                                        '<div class="font-bold">' + milestone.message + '</div>' +
+                                                        '<div class="text-sm opacity-90 mt-1">+' + milestone.xp + ' XP</div>' +
+                                                    '</div>' +
+                                                '</div>' +
+                                                '<div class="text-2xl font-black">' + value + '</div>' +
+                                            '</div>' +
+                                        '</div>';
+                                    }).join('')}
+                                </div>
+                            ` : `
+                                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    <div class="text-4xl mb-2">🎯</div>
+                                    <p>No milestones reached yet</p>
+                                    <p class="text-sm mt-1">Keep playing to reach milestones!</p>
+                                </div>
+                            `}
+                        </div>
+                        
+                        <!-- Awards Tab (POTM, etc.) -->
+                        <div id="profileContent-awards-${player.id}" class="profile-tab-content hidden">
+                            <div class="space-y-4">
+                                <!-- POTM Awards Count -->
+                                <div class="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-lg p-6 text-center shadow-lg">
+                                    <div class="text-6xl mb-2">⭐</div>
+                                    <div class="text-3xl font-black text-yellow-900">${player.potmAwards || 0}</div>
+                                    <div class="font-bold text-yellow-900 mt-2">Player of the Match Awards</div>
+                                    <div class="text-sm text-yellow-900/70 mt-1">Awarded for outstanding performances</div>
+                                </div>
+                                
+                                ${player.potmAwards > 0 ? `
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                        <div class="text-sm text-gray-600 dark:text-gray-400 text-center">
+                                            <p class="mb-2">🏆 <strong>Achievement Progress:</strong></p>
+                                            ${player.potmAwards >= 10 ? 
+                                                '<p class="text-green-600 dark:text-green-400 font-semibold">✅ MVP - 10+ POTM Awards Unlocked!</p>' :
+                                                player.potmAwards >= 5 ?
+                                                '<p class="text-blue-600 dark:text-blue-400 font-semibold">✅ Star Player - 5+ POTM Awards Unlocked!</p><p class="mt-1">Next: MVP at 10 POTM (${10 - player.potmAwards} more needed)</p>' :
+                                                '<p class="text-gray-600 dark:text-gray-400">Next: Star Player at 5 POTM (${5 - player.potmAwards} more needed)</p>'
+                                            }
+                                        </div>
                                     </div>
-                                ` : '';
-                            }).join('')}
+                                ` : ''}
+                                
+                                <!-- Check if player has won monthly POTM -->
+                                ${(() => {
+                                    // Check last few months for POTM wins
+                                    const currentDate = new Date();
+                                    const monthlyWins = [];
+                                    
+                                    for (let i = 0; i < 12; i++) {
+                                        const checkDate = new Date(currentDate);
+                                        checkDate.setMonth(checkDate.getMonth() - i);
+                                        const month = checkDate.getMonth();
+                                        const year = checkDate.getFullYear();
+                                        
+                                        // Count stats for that month
+                                        let monthGoals = 0;
+                                        let monthAssists = 0;
+                                        let monthPOTM = 0;
+                                        let monthGames = 0;
+                                        
+                                        games.forEach(game => {
+                                            const gameDate = new Date(game.date);
+                                            if (gameDate.getMonth() === month && gameDate.getFullYear() === year) {
+                                                const stats = game.playerStats && game.playerStats[player.name];
+                                                if (stats || (game.team1 && game.team1.includes(player.name)) || (game.team2 && game.team2.includes(player.name))) {
+                                                    monthGoals += (stats?.goals || 0);
+                                                    monthAssists += (stats?.assists || 0);
+                                                    if (game.playerOfTheMatch === player.name) monthPOTM++;
+                                                    monthGames++;
+                                                }
+                                            }
+                                        });
+                                        
+                                        if (monthGames > 0) {
+                                            const score = (monthGoals * 5) + (monthAssists * 3) + (monthPOTM * 10) + (monthGames * 1);
+                                            
+                                            // Check if this player had the highest score that month
+                                            let isWinner = true;
+                                            players.forEach(p => {
+                                                if (p.name === player.name) return;
+                                                
+                                                let pGoals = 0, pAssists = 0, pPOTM = 0, pGames = 0;
+                                                games.forEach(game => {
+                                                    const gameDate = new Date(game.date);
+                                                    if (gameDate.getMonth() === month && gameDate.getFullYear() === year) {
+                                                        const stats = game.playerStats && game.playerStats[p.name];
+                                                        if (stats || (game.team1 && game.team1.includes(p.name)) || (game.team2 && game.team2.includes(p.name))) {
+                                                            pGoals += (stats?.goals || 0);
+                                                            pAssists += (stats?.assists || 0);
+                                                            if (game.playerOfTheMatch === p.name) pPOTM++;
+                                                            pGames++;
+                                                        }
+                                                    }
+                                                });
+                                                
+                                                const pScore = (pGoals * 5) + (pAssists * 3) + (pPOTM * 10) + (pGames * 1);
+                                                if (pScore > score || (pScore === score && pGoals > monthGoals)) {
+                                                    isWinner = false;
+                                                }
+                                            });
+                                            
+                                            if (isWinner && score > 0) {
+                                                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                                monthlyWins.push({
+                                                    month: monthNames[month],
+                                                    year: year,
+                                                    goals: monthGoals,
+                                                    assists: monthAssists,
+                                                    potm: monthPOTM,
+                                                    games: monthGames,
+                                                    score: score
+                                                });
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (monthlyWins.length > 0) {
+                                        return '<div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">' +
+                                            '<div class="bg-gradient-to-r from-purple-500 to-pink-500 p-4 text-white">' +
+                                                '<h5 class="font-bold text-center flex items-center justify-center gap-2">' +
+                                                    '<span class="text-2xl">👑</span>' +
+                                                    '<span>Monthly Player Awards</span>' +
+                                                '</h5>' +
+                                            '</div>' +
+                                            '<div class="p-4 space-y-3">' +
+                                                monthlyWins.map(win => 
+                                                    '<div class="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-lg p-4 border-l-4 border-yellow-500">' +
+                                                        '<div class="flex items-center justify-between mb-2">' +
+                                                            '<div class="font-bold text-gray-900 dark:text-white">' + win.month + ' ' + win.year + '</div>' +
+                                                            '<div class="text-yellow-600 dark:text-yellow-400 font-bold">' + win.score + ' pts</div>' +
+                                                        '</div>' +
+                                                        '<div class="text-sm text-gray-600 dark:text-gray-400 flex gap-4">' +
+                                                            '<span>' + win.goals + '⚽</span>' +
+                                                            '<span>' + win.assists + '🅰️</span>' +
+                                                            '<span>' + win.potm + '⭐</span>' +
+                                                            '<span>' + win.games + '🎮</span>' +
+                                                        '</div>' +
+                                                    '</div>'
+                                                ).join('') +
+                                            '</div>' +
+                                        '</div>';
+                                    } else {
+                                        return '<div class="text-center py-8 text-gray-500 dark:text-gray-400">' +
+                                            '<div class="text-4xl mb-2">👑</div>' +
+                                            '<p>No monthly awards yet</p>' +
+                                            '<p class="text-sm mt-1">Be the top performer in a month to win!</p>' +
+                                        '</div>';
+                                    }
+                                })()}
+                            </div>
                         </div>
                     </div>
-                    ` : ''}
 
                     <!-- Player Info -->
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
@@ -5379,6 +5703,32 @@
             document.getElementById('playerProfileModal').classList.remove('flex');
         }
 
+        function switchProfileTab(tabName, playerId) {
+            // Remove active class from all profile tabs for this player
+            document.querySelectorAll(`[id^="profileTab-"][id$="-${playerId}"]`).forEach(tab => {
+                tab.classList.remove('active', 'bg-gradient-to-r', 'from-yellow-400', 'to-orange-500', 'text-white', 'shadow-md');
+                tab.classList.add('bg-gray-200', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300');
+            });
+            
+            // Hide all profile tab contents for this player
+            document.querySelectorAll(`[id^="profileContent-"][id$="-${playerId}"]`).forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Activate selected tab
+            const activeTab = document.getElementById(`profileTab-${tabName}-${playerId}`);
+            if (activeTab) {
+                activeTab.classList.add('active', 'bg-gradient-to-r', 'from-yellow-400', 'to-orange-500', 'text-white', 'shadow-md');
+                activeTab.classList.remove('bg-gray-200', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300');
+            }
+            
+            // Show selected content
+            const activeContent = document.getElementById(`profileContent-${tabName}-${playerId}`);
+            if (activeContent) {
+                activeContent.classList.remove('hidden');
+            }
+        }
+
         function showPlayerLogin() {
             // Populate player dropdown
             const playerSelect = document.getElementById('playerLoginSelect');
@@ -5431,7 +5781,7 @@
                 isPlayer: true
             };
             
-            saveToLocalStorage();
+            saveToLocalStorage(); // Save currentUser session
             updateUIForUser();
             hidePlayerLogin();
             
@@ -5635,8 +5985,7 @@
             
             if (player) {
                 player.profilePicture = compressedBase64;
-                FirebaseService.updatePlayer(player);
-                saveToLocalStorage();
+                FirebaseService.updatePlayer(player); // Syncs to Firestore
                 updateDisplay();
                 updateUIForUser();
                 showPlayerProfile(currentPlayerId);
@@ -5716,8 +6065,7 @@
             
             if (player) {
                 delete player.profilePicture;
-                FirebaseService.updatePlayer(player);
-                saveToLocalStorage();
+                FirebaseService.updatePlayer(player); // Syncs to Firestore
                 updateDisplay();
                 updateUIForUser(); // Refresh navigation area to remove profile picture
                 
@@ -5813,11 +6161,11 @@
             // Update the currentUser playerName if the name changed
             if (currentUser.playerName !== newName) {
                 currentUser.playerName = newName;
+                saveToLocalStorage(); // Update currentUser session
             }
 
-            // Update in Firebase and local storage
-            FirebaseService.updatePlayer(player);
-            saveToLocalStorage();
+            // Update in Firebase
+            FirebaseService.updatePlayer(player); // Syncs to Firestore
             updateDisplay();
             updateUIForUser(); // Refresh navigation area to reflect name changes
             
@@ -5873,119 +6221,583 @@
             }
         }
 
-        // Migration function to move localStorage data to Firebase
-        async function migrateLocalStorageToFirebase() {
-            if (!firebaseInitialized) {
-                alert('Please setup Firebase first before migrating data!');
+        // Show games history modal
+        function showGamesHistory() {
+            listAllGamesInModal();
+        }
+
+        // Comprehensive games history viewer with UI
+        async function listAllGamesInModal() {
+            if (!window.firebaseInitialized || !window.firebase) {
+                alert('Please setup Firebase first!');
                 return;
             }
 
             try {
+                const gamesRef = window.firebase.collection(window.firebase.db, 'games');
+                const snapshot = await window.firebase.getDocs(gamesRef);
                 
-                // Get data from localStorage (using footable prefix)
-                const localGames = JSON.parse(localStorage.getItem('footable-games') || '[]');
-                const localPlayers = JSON.parse(localStorage.getItem('footable-players') || '[]');
-                const localUsers = JSON.parse(localStorage.getItem('footable-users') || '[]');
+                const gamesList = [];
+                snapshot.docs.forEach((doc) => {
+                    const data = doc.data();
+                    gamesList.push({
+                        firestoreDocId: doc.id,
+                        ...data
+                    });
+                });
+                
+                // Sort by date descending
+                gamesList.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                // Create modal content
+                let html = `
+                    <div class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+                        <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700">
+                            <!-- Header -->
+                            <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
+                                <div>
+                                    <h2 class="text-3xl font-bold text-white flex items-center gap-3">
+                                        <span>📚</span>
+                                        <span>Games History</span>
+                                    </h2>
+                                    <p class="text-blue-100 mt-1">${gamesList.length} total games</p>
+                                </div>
+                                <button onclick="closeGamesHistoryModal()" class="text-white hover:text-gray-200 hover:bg-white/10 p-2 rounded-lg transition-all">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <!-- Games List -->
+                            <div class="overflow-y-auto flex-1 p-6 bg-gray-50 dark:bg-gray-900">
+                                ${gamesList.length === 0 ? `
+                                    <div class="text-center py-12">
+                                        <div class="text-6xl mb-4">🎮</div>
+                                        <p class="text-gray-500 dark:text-gray-400 text-lg">No games in history yet</p>
+                                    </div>
+                                ` : `
+                                <div class="grid gap-4">
+                                    ${gamesList.map((game, index) => {
+                                        // Calculate stats
+                                        let totalGoals = 0;
+                                        let totalAssists = 0;
+                                        if (game.playerStats) {
+                                            Object.values(game.playerStats).forEach(stats => {
+                                                totalGoals += stats.goals || 0;
+                                                totalAssists += stats.assists || 0;
+                                            });
+                                        }
+                                        
+                                        return `
+                                        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-l-4 border-blue-500">
+                                            <div class="p-5">
+                                                <!-- Header Row -->
+                                                <div class="flex items-start justify-between mb-4">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                                                            ${index + 1}
+                                                        </div>
+                                                        <div>
+                                                            <div class="flex items-center gap-2 mb-1">
+                                                                <span class="text-xl font-bold text-gray-900 dark:text-white">${game.date}</span>
+                                                            </div>
+                                                            <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                                <span>📍 ${game.location || 'Unknown'}</span>
+                                                                <span>•</span>
+                                                                <span>⚽ ${totalGoals} goals</span>
+                                                                <span>•</span>
+                                                                <span>🅰️ ${totalAssists} assists</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Score Display -->
+                                                    <div class="text-center">
+                                                        <div class="text-4xl font-black text-gray-900 dark:text-white mb-1">
+                                                            ${game.score1} <span class="text-gray-400 dark:text-gray-600">-</span> ${game.score2}
+                                                        </div>
+                                                        ${game.playerOfTheMatch ? `<div class="text-xs bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full font-semibold">⭐ POTM: ${game.playerOfTheMatch}</div>` : ''}
+                                                    </div>
+                                                    
+                                                    <!-- Action Buttons (Admin Only) -->
+                                                    <div class="admin-only flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity" style="display: none;">
+                                                        <button onclick="editGameFromHistory('${game.id}')" class="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors" title="Edit Game">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                            </svg>
+                                                        </button>
+                                                        <button onclick="deleteGameFromHistory('${game.id}')" class="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors" title="Delete Game">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Teams Display -->
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <!-- Team 1 -->
+                                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                                                        <div class="flex items-center gap-2 mb-3">
+                                                            <div class="font-bold text-blue-900 dark:text-blue-300">Team 1</div>
+                                                            ${game.score1 > game.score2 ? '<span class="text-xl">🏆</span>' : ''}
+                                                        </div>
+                                                        <div class="space-y-2">
+                                                            ${(game.team1 || []).map(playerName => {
+                                                                const stats = game.playerStats && game.playerStats[playerName] ? game.playerStats[playerName] : { goals: 0, assists: 0 };
+                                                                return `
+                                                                    <div class="flex justify-between items-center bg-white dark:bg-gray-800 rounded px-3 py-2">
+                                                                        <span class="font-medium text-gray-900 dark:text-white">${playerName}</span>
+                                                                        <div class="flex gap-3 text-sm">
+                                                                            <span class="text-gray-600 dark:text-gray-400">${stats.goals}⚽</span>
+                                                                            <span class="text-gray-600 dark:text-gray-400">${stats.assists}🅰️</span>
+                                                                        </div>
+                                                                    </div>
+                                                                `;
+                                                            }).join('')}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Team 2 -->
+                                                    <div class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg p-4 border border-red-200 dark:border-red-700">
+                                                        <div class="flex items-center gap-2 mb-3">
+                                                            <div class="font-bold text-red-900 dark:text-red-300">Team 2</div>
+                                                            ${game.score2 > game.score1 ? '<span class="text-xl">🏆</span>' : ''}
+                                                        </div>
+                                                        <div class="space-y-2">
+                                                            ${(game.team2 || []).map(playerName => {
+                                                                const stats = game.playerStats && game.playerStats[playerName] ? game.playerStats[playerName] : { goals: 0, assists: 0 };
+                                                                return `
+                                                                    <div class="flex justify-between items-center bg-white dark:bg-gray-800 rounded px-3 py-2">
+                                                                        <span class="font-medium text-gray-900 dark:text-white">${playerName}</span>
+                                                                        <div class="flex gap-3 text-sm">
+                                                                            <span class="text-gray-600 dark:text-gray-400">${stats.goals}⚽</span>
+                                                                            <span class="text-gray-600 dark:text-gray-400">${stats.assists}🅰️</span>
+                                                                        </div>
+                                                                    </div>
+                                                                `;
+                                                            }).join('')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                                `}
+                            </div>
+                            
+                            <!-- Footer Actions -->
+                            <div class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6">
+                                <div class="flex justify-end">
+                                    <button onclick="closeGamesHistoryModal()" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Inject modal into page
+                const modalContainer = document.createElement('div');
+                modalContainer.id = 'gamesHistoryModal';
+                modalContainer.innerHTML = html;
+                document.body.appendChild(modalContainer);
+                
+            } catch (error) {
+                console.error('Error listing games:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        // Edit game from history
+        async function editGameFromHistory(gameId) {
+            closeGamesHistoryModal();
+            
+            // Find the game in the global games array
+            const gameIndex = games.findIndex(g => g.id === gameId);
+            if (gameIndex === -1) {
+                alert('Game not found');
+                return;
+            }
+            
+            // Use the existing edit functionality
+            currentGameIndex = gameIndex;
+            editCurrentGame();
+        }
+        
+        // Delete game from history
+        async function deleteGameFromHistory(gameId) {
+            if (!confirm('Are you sure you want to delete this game?\n\nThis action cannot be undone and will require a stats rebuild.')) {
+                return;
+            }
+            
+            try {
+                await FirebaseService.deleteGame(gameId);
+                alert('Game deleted successfully!\n\nPlease rebuild player stats to update all records.');
+                
+                // Refresh the modal
+                closeGamesHistoryModal();
+                setTimeout(() => showGamesHistory(), 300);
+            } catch (error) {
+                console.error('Error deleting game:', error);
+                alert('Error deleting game: ' + error.message);
+            }
+        }
+        
+        function closeGamesHistoryModal() {
+            const modal = document.getElementById('gamesHistoryModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
 
+        // Display all games in the All Games tab
+        async function displayAllGamesTab() {
+            const container = document.getElementById('allGamesList');
+            if (!window.firebaseInitialized || !window.firebase) {
+                container.innerHTML = '<p class="text-red-500 dark:text-red-400 text-center py-12 text-lg">⚠️ Firebase not initialized</p>';
+                return;
+            }
 
-                if (localGames.length === 0 && localPlayers.length === 0 && localUsers.length === 0) {
-                    alert('No data found in localStorage to migrate.');
+            try {
+                container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">Loading games... 🔄</p>';
+                
+                const gamesRef = window.firebase.collection(window.firebase.db, 'games');
+                const snapshot = await window.firebase.getDocs(gamesRef);
+                
+                const gamesList = [];
+                snapshot.docs.forEach((doc) => {
+                    const data = doc.data();
+                    gamesList.push({
+                        firestoreDocId: doc.id,
+                        ...data
+                    });
+                });
+                
+                // Sort by date descending
+                gamesList.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                if (gamesList.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-12">
+                            <div class="text-6xl mb-4">🎮</div>
+                            <p class="text-gray-500 dark:text-gray-400 text-lg">No games in history yet</p>
+                        </div>
+                    `;
                     return;
                 }
-
-                let migrated = { games: 0, players: 0, users: 0 };
-
-                // Migrate users first
-                for (const user of localUsers) {
-                    try {
-                        const userData = {
-                            username: user.username,
-                            password: user.password,
-                            isAdmin: user.isAdmin || false,
-                            originalId: user.id,
-                            migratedAt: new Date().toISOString(),
-                            migratedFrom: 'localStorage'
-                        };
-                        
-                        await window.firebase.addDoc(
-                            window.firebase.collection(window.firebase.db, 'users'), 
-                            userData
-                        );
-                        migrated.users++;
-                    } catch (error) {
-                    }
-                }
-
-                // Migrate players
-                for (const player of localPlayers) {
-                    try {
-                        const playerData = {
-                            name: player.name,
-                            position: player.position || 'Unknown',
-                            age: player.age || null,
-                            gamesPlayed: player.gamesPlayed || 0,
-                            wins: player.wins || 0,
-                            draws: player.draws || 0,
-                            losses: player.losses || 0,
-                            goals: player.goals || 0,
-                            assists: player.assists || 0,
-                            createdBy: player.createdBy || 'migration',
-                            originalId: player.id,
-                            migratedAt: new Date().toISOString(),
-                            migratedFrom: 'localStorage'
-                        };
-                        
-                        await window.firebase.addDoc(
-                            window.firebase.collection(window.firebase.db, 'players'), 
-                            playerData
-                        );
-                        migrated.players++;
-                    } catch (error) {
-                    }
-                }
-
-                // Migrate games
-                for (const game of localGames) {
-                    try {
-                        const gameData = {
-                            date: game.date,
-                            team1: game.team1 || [],
-                            team2: game.team2 || [],
-                            score1: game.score1 || 0,
-                            score2: game.score2 || 0,
-                            location: game.location || 'Unknown',
-                            team1Goals: game.team1Goals || [],
-                            team1Assists: game.team1Assists || [],
-                            team2Goals: game.team2Goals || [],
-                            team2Assists: game.team2Assists || [],
-                            addedBy: game.addedBy || 'migration',
-                            originalId: game.id,
-                            migratedAt: new Date().toISOString(),
-                            migratedFrom: 'localStorage'
-                        };
-                        
-                        await window.firebase.addDoc(
-                            window.firebase.collection(window.firebase.db, 'games'), 
-                            gameData
-                        );
-                        migrated.games++;
-                    } catch (error) {
-                    }
-                }
-
-                // Create backup of localStorage data
-                const backupData = {
-                    games: localGames,
-                    players: localPlayers,
-                    users: localUsers,
-                    migratedAt: new Date().toISOString()
-                };
-                localStorage.setItem('footable-backup', JSON.stringify(backupData));
-
-                alert(`Migration completed! ✅\nMigrated: ${migrated.games} games, ${migrated.players} players, ${migrated.users} users\n\nYour original data has been backed up in localStorage as 'footable-backup'.`);
                 
-                return migrated;
+                // Build HTML
+                let html = `<div class="grid gap-4">`;
+                
+                gamesList.forEach((game, index) => {
+                    // Calculate stats
+                    let totalGoals = 0;
+                    let totalAssists = 0;
+                    if (game.playerStats) {
+                        Object.values(game.playerStats).forEach(stats => {
+                            totalGoals += stats.goals || 0;
+                            totalAssists += stats.assists || 0;
+                        });
+                    }
+                    
+                    html += `
+                        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-l-4 border-blue-500">
+                            <div class="p-5">
+                                <!-- Header Row -->
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                                            ${index + 1}
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <span class="text-xl font-bold text-gray-900 dark:text-white">${game.date}</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                <span>📍 ${game.location || 'Unknown'}</span>
+                                                <span>•</span>
+                                                <span>⚽ ${totalGoals} goals</span>
+                                                <span>•</span>
+                                                <span>🅰️ ${totalAssists} assists</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Score Display -->
+                                    <div class="text-center">
+                                        <div class="text-4xl font-black text-gray-900 dark:text-white mb-1">
+                                            ${game.score1} <span class="text-gray-400 dark:text-gray-600">-</span> ${game.score2}
+                                        </div>
+                                        ${game.playerOfTheMatch ? `<div class="text-xs bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full font-semibold">⭐ POTM: ${game.playerOfTheMatch}</div>` : ''}
+                                    </div>
+                                    
+                                    <!-- Action Buttons (Admin Only) -->
+                                    <div class="admin-only flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity" style="display: none;">
+                                        <button onclick="editGameFromHistory('${game.id}')" class="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors" title="Edit Game">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                            </svg>
+                                        </button>
+                                        <button onclick="deleteGameFromHistory('${game.id}')" class="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors" title="Delete Game">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Teams Display -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Team 1 -->
+                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                                        <div class="flex items-center gap-2 mb-3">
+                                            <div class="font-bold text-blue-900 dark:text-blue-300">Team 1</div>
+                                            ${game.score1 > game.score2 ? '<span class="text-xl">🏆</span>' : ''}
+                                        </div>
+                                        <div class="space-y-2">
+                                            ${(game.team1 || []).map(playerName => {
+                                                const stats = game.playerStats && game.playerStats[playerName] ? game.playerStats[playerName] : { goals: 0, assists: 0 };
+                                                return `
+                                                    <div class="flex justify-between items-center bg-white dark:bg-gray-800 rounded px-3 py-2">
+                                                        <span class="font-medium text-gray-900 dark:text-white">${playerName}</span>
+                                                        <div class="flex gap-3 text-sm">
+                                                            <span class="text-gray-600 dark:text-gray-400">${stats.goals}⚽</span>
+                                                            <span class="text-gray-600 dark:text-gray-400">${stats.assists}🅰️</span>
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Team 2 -->
+                                    <div class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg p-4 border border-red-200 dark:border-red-700">
+                                        <div class="flex items-center gap-2 mb-3">
+                                            <div class="font-bold text-red-900 dark:text-red-300">Team 2</div>
+                                            ${game.score2 > game.score1 ? '<span class="text-xl">🏆</span>' : ''}
+                                        </div>
+                                        <div class="space-y-2">
+                                            ${(game.team2 || []).map(playerName => {
+                                                const stats = game.playerStats && game.playerStats[playerName] ? game.playerStats[playerName] : { goals: 0, assists: 0 };
+                                                return `
+                                                    <div class="flex justify-between items-center bg-white dark:bg-gray-800 rounded px-3 py-2">
+                                                        <span class="font-medium text-gray-900 dark:text-white">${playerName}</span>
+                                                        <div class="flex gap-3 text-sm">
+                                                            <span class="text-gray-600 dark:text-gray-400">${stats.goals}⚽</span>
+                                                            <span class="text-gray-600 dark:text-gray-400">${stats.assists}🅰️</span>
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
+                // Update admin-only visibility based on current user
+                if (currentUser && currentUser.isAdmin) {
+                    document.querySelectorAll('#allGamesList .admin-only').forEach(el => {
+                        el.style.display = '';
+                    });
+                } else {
+                    document.querySelectorAll('#allGamesList .admin-only').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Error loading games:', error);
+                container.innerHTML = '<p class="text-red-500 dark:text-red-400 text-center py-12 text-lg">⚠️ Error loading games: ' + error.message + '</p>';
+            }
+        }
 
+        // Diagnostic function to compare Firestore vs Local State for a specific player
+        async function diagnosePlayerGames(playerName) {
+            if (!window.firebaseInitialized || !window.firebase) {
+                alert('Please setup Firebase first!');
+                return;
+            }
+
+            if (!playerName) {
+                playerName = prompt('Enter player name to diagnose:');
+                if (!playerName) return;
+            }
+
+            try {
+                console.log(`\n${'='.repeat(60)}`);
+                console.log(`DIAGNOSING GAMES FOR: ${playerName}`);
+                console.log('='.repeat(60));
+                
+                // Get all games from Firestore
+                const gamesRef = window.firebase.collection(window.firebase.db, 'games');
+                const snapshot = await window.firebase.getDocs(gamesRef);
+                
+                const firestoreGames = [];
+                snapshot.docs.forEach((doc) => {
+                    const data = doc.data();
+                    firestoreGames.push({
+                        firestoreDocId: doc.id,
+                        ...data
+                    });
+                });
+                
+                // Sort by date
+                firestoreGames.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                // Filter games with this player
+                const firestorePlayerGames = firestoreGames.filter(game => 
+                    (game.team1 && game.team1.includes(playerName)) || 
+                    (game.team2 && game.team2.includes(playerName))
+                );
+                
+                const localPlayerGames = games.filter(game => 
+                    (game.team1 && game.team1.includes(playerName)) || 
+                    (game.team2 && game.team2.includes(playerName))
+                );
+                
+                console.log('\n📊 COMPARISON RESULTS:');
+                console.log(`Firestore total games: ${firestoreGames.length}`);
+                console.log(`Local state total games: ${games.length}`);
+                console.log(`\nFirestore games with ${playerName}: ${firestorePlayerGames.length}`);
+                console.log(`Local state games with ${playerName}: ${localPlayerGames.length}`);
+                
+                // Find player stats
+                const firestorePlayer = players.find(p => p.name === playerName);
+                if (firestorePlayer) {
+                    console.log(`\nPlayer stats show: ${firestorePlayer.gamesPlayed || 0} games played`);
+                }
+                
+                console.log('\n📋 GAMES IN FIRESTORE WITH THIS PLAYER:');
+                firestorePlayerGames.forEach((game, i) => {
+                    const team = game.team1?.includes(playerName) ? 'Team 1' : 'Team 2';
+                    const stats = game.playerStats && game.playerStats[playerName] ? game.playerStats[playerName] : { goals: 0, assists: 0 };
+                    console.log(`${i + 1}. ${game.date} | ${game.location} | Score: ${game.score1}-${game.score2} | ${team} | ${stats.goals}⚽ ${stats.assists}🅰️ | ID: ${game.id}`);
+                });
+                
+                console.log('\n📋 GAMES IN LOCAL STATE WITH THIS PLAYER:');
+                localPlayerGames.forEach((game, i) => {
+                    const team = game.team1?.includes(playerName) ? 'Team 1' : 'Team 2';
+                    const stats = game.playerStats && game.playerStats[playerName] ? game.playerStats[playerName] : { goals: 0, assists: 0 };
+                    console.log(`${i + 1}. ${game.date} | ${game.location} | Score: ${game.score1}-${game.score2} | ${team} | ${stats.goals}⚽ ${stats.assists}🅰️ | ID: ${game.id}`);
+                });
+                
+                // Find missing games
+                const firestoreIds = new Set(firestorePlayerGames.map(g => g.id));
+                const localIds = new Set(localPlayerGames.map(g => g.id));
+                
+                const missingInLocal = firestorePlayerGames.filter(g => !localIds.has(g.id));
+                const missingInFirestore = localPlayerGames.filter(g => !firestoreIds.has(g.id));
+                
+                if (missingInLocal.length > 0) {
+                    console.log('\n⚠️ GAMES IN FIRESTORE BUT NOT IN LOCAL STATE:');
+                    missingInLocal.forEach(game => {
+                        console.log(`- ${game.date} | ${game.location} | ${game.score1}-${game.score2} | ID: ${game.id}`);
+                    });
+                }
+                
+                if (missingInFirestore.length > 0) {
+                    console.log('\n⚠️ GAMES IN LOCAL STATE BUT NOT IN FIRESTORE:');
+                    missingInFirestore.forEach(game => {
+                        console.log(`- ${game.date} | ${game.location} | ${game.score1}-${game.score2} | ID: ${game.id}`);
+                    });
+                }
+                
+                if (missingInLocal.length === 0 && missingInFirestore.length === 0) {
+                    console.log('\n✅ All games match between Firestore and Local State!');
+                } else {
+                    console.log('\n⚠️ DISCREPANCY DETECTED!');
+                    console.log('Recommendation: Refresh the page to reload data from Firestore');
+                }
+                
+                console.log('\n' + '='.repeat(60));
+                
+                const message = `Diagnosis for ${playerName}:\n\n` +
+                    `Firestore: ${firestorePlayerGames.length} games\n` +
+                    `Local State: ${localPlayerGames.length} games\n` +
+                    `Player Stats: ${firestorePlayer?.gamesPlayed || 0} games\n\n` +
+                    `Missing in Local: ${missingInLocal.length}\n` +
+                    `Missing in Firestore: ${missingInFirestore.length}\n\n` +
+                    `Check browser console for full details.`;
+                
+                alert(message);
+                
+            } catch (error) {
+                console.error('Error diagnosing player games:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Diagnostic function to see all games in Firestore (console version)
+        async function listAllGames() {
+            if (!window.firebaseInitialized || !window.firebase) {
+                alert('Please setup Firebase first!');
+                return;
+            }
+
+            try {
+                const gamesRef = window.firebase.collection(window.firebase.db, 'games');
+                const snapshot = await window.firebase.getDocs(gamesRef);
+                
+                console.log('=== ALL GAMES IN FIRESTORE ===');
+                console.log('Total documents:', snapshot.docs.length);
+                
+                const gamesList = [];
+                snapshot.docs.forEach((doc, index) => {
+                    const data = doc.data();
+                    console.log(`\n[${index + 1}] Firestore Doc ID: ${doc.id}`);
+                    console.log(`    Game ID: ${data.id}`);
+                    console.log(`    Date: ${data.date}`);
+                    console.log(`    Location: ${data.location}`);
+                    console.log(`    Score: ${data.score1}-${data.score2}`);
+                    console.log(`    Team 1: ${data.team1?.join(', ')}`);
+                    console.log(`    Team 2: ${data.team2?.join(', ')}`);
+                    
+                    gamesList.push({
+                        firestoreDocId: doc.id,
+                        gameId: data.id,
+                        date: data.date,
+                        location: data.location,
+                        score: `${data.score1}-${data.score2}`,
+                        team1: data.team1,
+                        team2: data.team2
+                    });
+                });
+                
+                console.log('\n=== SUMMARY ===');
+                console.log('Total games:', gamesList.length);
+                
+                // Find duplicates by date+score
+                const duplicatesByMatch = new Map();
+                gamesList.forEach(game => {
+                    const key = `${game.date}_${game.score}_${game.location}`;
+                    if (!duplicatesByMatch.has(key)) {
+                        duplicatesByMatch.set(key, []);
+                    }
+                    duplicatesByMatch.get(key).push(game);
+                });
+                
+                const actualDuplicates = Array.from(duplicatesByMatch.values()).filter(g => g.length > 1);
+                if (actualDuplicates.length > 0) {
+                    console.log('\n=== POTENTIAL DUPLICATES (by date+score+location) ===');
+                    actualDuplicates.forEach((group, idx) => {
+                        console.log(`\nDuplicate Group ${idx + 1}:`, group);
+                    });
+                }
+                
+                alert(`Found ${gamesList.length} total games in Firestore.\n\nCheck the browser console for detailed listing.`);
+                return gamesList;
+                
             } catch (error) {
                 alert(`Migration failed: ${error.message}\n\nCheck the browser console for details.`);
                 return null;
@@ -6014,12 +6826,12 @@
         async function initializeApp() {
             
             initializeTheme();
-            loadFromLocalStorage();
+            loadFromLocalStorage(); // Load currentUser session only
             loadNotifications();
             initializeDefaultUsers();
             
-            // Recalculate XP for all existing players
-            recalculateAllPlayerXP();
+            // Don't recalculate XP on init - Firestore has the correct values
+            // Only recalculate when explicitly needed (e.g., after adding/editing games)
             
             updateUIForUser();
             updateDisplay();
@@ -6060,10 +6872,9 @@
                                 const userData = userDocSnap.data();
                                 isAdmin = userData.isAdmin || false;
                                 userFound = true;
-                                console.log('User found by UID:', user.uid, 'isAdmin:', isAdmin);
                             }
                         } catch (uidError) {
-                            console.log('Could not find user by UID, trying email lookup...', uidError);
+                            // Could not find user by UID, will try email lookup
                         }
                         
                         // If not found by UID, fall back to email query (old method)
