@@ -285,11 +285,21 @@
 
                 <!-- All Players Tab -->
                 <div id="content-allPlayers" class="dashboard-content hidden">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="p-3 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 shadow-lg">
-                            <span class="text-white text-2xl">👥</span>
+                    <div class="flex flex-col gap-4 mb-6">
+                        <div class="flex items-center gap-4">
+                            <div class="p-3 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 shadow-lg">
+                                <span class="text-white text-2xl">👥</span>
+                            </div>
+                            <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">All Players</h3>
                         </div>
-                        <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">All Players</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 self-center mr-2">Sort by:</span>
+                            <button onclick="sortPlayers('name-asc')" class="px-3 py-1.5 text-sm rounded-lg transition-all" id="sort-name-asc">A → Z</button>
+                            <button onclick="sortPlayers('name-desc')" class="px-3 py-1.5 text-sm rounded-lg transition-all" id="sort-name-desc">Z → A</button>
+                            <button onclick="sortPlayers('goals')" class="px-3 py-1.5 text-sm rounded-lg transition-all" id="sort-goals">⚽ Goals</button>
+                            <button onclick="sortPlayers('assists')" class="px-3 py-1.5 text-sm rounded-lg transition-all" id="sort-assists">🅰️ Assists</button>
+                            <button onclick="sortPlayers('wins')" class="px-3 py-1.5 text-sm rounded-lg transition-all" id="sort-wins">🏆 Wins</button>
+                        </div>
                     </div>
                     <div id="allPlayersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg col-span-full">Loading players... 👤</p>
@@ -796,6 +806,7 @@
         let unsubscribeFunctions = [];
         let cropperImage = null;
         let cropperState = { x: 50, y: 50, size: 200, isDragging: false, isResizing: false, resizeCorner: null, startX: 0, startY: 0 };
+        let playersSortBy = 'name-asc'; // Default sort
 
         // Gamification System
         const ACHIEVEMENTS = {
@@ -1647,6 +1658,8 @@
             // Refresh data based on tab
             if (tabName === 'allPlayers') {
                 displayAllPlayers();
+                // Initialize sort button styles
+                sortPlayers(playersSortBy);
             } else if (tabName === 'teamGenerator') {
                 displayTeamGenerator();
             } else if (tabName === 'allGames') {
@@ -2827,6 +2840,99 @@
             }
         }
 
+        function sortPlayers(sortBy) {
+            playersSortBy = sortBy;
+            
+            // Update button styles
+            const buttons = ['sort-name-asc', 'sort-name-desc', 'sort-goals', 'sort-assists', 'sort-wins'];
+            buttons.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    if (id === `sort-${sortBy}`) {
+                        btn.className = 'px-3 py-1.5 text-sm rounded-lg transition-all bg-blue-500 text-white font-semibold shadow-md';
+                    } else {
+                        btn.className = 'px-3 py-1.5 text-sm rounded-lg transition-all bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600';
+                    }
+                }
+            });
+            
+            displayAllPlayers();
+        }
+
+        function getPlayerStatsDisplay(player, totalGames, winRate) {
+            // Display different stats based on current sort
+            switch(playersSortBy) {
+                case 'goals':
+                    return `
+                        <div class="flex gap-3 mt-4 text-center">
+                            <div class="flex-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border-2 border-blue-500">
+                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${player.goals || 0} ⚽</div>
+                                <div class="text-xs text-gray-600 dark:text-gray-400 font-semibold">Goals</div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xl font-bold text-purple-600 dark:text-purple-400">${player.assists || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Assists</div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xl font-bold text-gray-600 dark:text-gray-400">${totalGames}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
+                            </div>
+                        </div>
+                    `;
+                case 'assists':
+                    return `
+                        <div class="flex gap-3 mt-4 text-center">
+                            <div class="flex-1 bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border-2 border-purple-500">
+                                <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">${player.assists || 0} 🅰️</div>
+                                <div class="text-xs text-gray-600 dark:text-gray-400 font-semibold">Assists</div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xl font-bold text-blue-600 dark:text-blue-400">${player.goals || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Goals</div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xl font-bold text-gray-600 dark:text-gray-400">${totalGames}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
+                            </div>
+                        </div>
+                    `;
+                case 'wins':
+                    return `
+                        <div class="flex gap-3 mt-4 text-center">
+                            <div class="flex-1 bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border-2 border-green-500">
+                                <div class="text-2xl font-bold text-green-600 dark:text-green-400">${player.wins || 0} 🏆</div>
+                                <div class="text-xs text-gray-600 dark:text-gray-400 font-semibold">Wins</div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xl font-bold text-yellow-600 dark:text-yellow-400">${winRate}%</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xl font-bold text-gray-600 dark:text-gray-400">${totalGames}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
+                            </div>
+                        </div>
+                    `;
+                default: // name-asc, name-desc
+                    return `
+                        <div class="flex gap-4 mt-4 text-center">
+                            <div class="flex-1">
+                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${totalGames}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-2xl font-bold text-green-600 dark:text-green-400">${player.wins || 0}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Wins</div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${winRate}%</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+                            </div>
+                        </div>
+                    `;
+            }
+        }
+
         function displayAllPlayers() {
             const grid = document.getElementById('allPlayersGrid');
             
@@ -2835,8 +2941,28 @@
                 return;
             }
             
-            // Sort players alphabetically by name
-            const sortedPlayers = [...players].sort((a, b) => a.name.localeCompare(b.name));
+            // Sort players based on current sort setting
+            let sortedPlayers = [...players];
+            
+            switch(playersSortBy) {
+                case 'name-asc':
+                    sortedPlayers.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'name-desc':
+                    sortedPlayers.sort((a, b) => b.name.localeCompare(a.name));
+                    break;
+                case 'goals':
+                    sortedPlayers.sort((a, b) => (b.goals || 0) - (a.goals || 0));
+                    break;
+                case 'assists':
+                    sortedPlayers.sort((a, b) => (b.assists || 0) - (a.assists || 0));
+                    break;
+                case 'wins':
+                    sortedPlayers.sort((a, b) => (b.wins || 0) - (a.wins || 0));
+                    break;
+                default:
+                    sortedPlayers.sort((a, b) => a.name.localeCompare(b.name));
+            }
             
             grid.innerHTML = sortedPlayers.map(player => {
                 const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name) + '&background=random&size=200';
@@ -2866,20 +2992,7 @@
                             </div>
                             <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">${player.name}</h4>
                             ${player.phoneNumber ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-2">📱 ${player.phoneNumber}</p>` : ''}
-                            <div class="flex gap-4 mt-4 text-center">
-                                <div class="flex-1">
-                                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${totalGames}</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">Games</div>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="text-2xl font-bold text-green-600 dark:text-green-400">${player.wins || 0}</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">Wins</div>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${winRate}%</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
-                                </div>
-                            </div>
+                            ${getPlayerStatsDisplay(player, totalGames, winRate)}
                         </div>
                     </div>
                 `;
