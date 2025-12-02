@@ -1729,11 +1729,11 @@
                         return bAssists - aAssists;
                     }
                     
-                    // Tiebreaker 3: Win percentage
-                    const aWinRate = getWinPercentage(a);
-                    const bWinRate = getWinPercentage(b);
-                    if (aWinRate !== bWinRate) {
-                        return bWinRate - aWinRate;
+                    // Tiebreaker 3: Points per game
+                    const aPPG = parseFloat(getPointsPerGame(a));
+                    const bPPG = parseFloat(getPointsPerGame(b));
+                    if (aPPG !== bPPG) {
+                        return bPPG - aPPG;
                     }
                     
                     // Final tiebreaker: Games played
@@ -1795,8 +1795,11 @@
                         </div>
                         <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 flex-shrink-0">
                             <div class="text-left sm:text-right flex-1 sm:flex-initial sm:min-w-[90px]">
-                                <div class="font-black text-xl sm:text-2xl mb-0.5 sm:mb-1 ${getWinPercentage(player) >= 70 ? 'text-green-600 dark:text-green-400' : getWinPercentage(player) >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}">
-                                    ${getWinPercentage(player)}%
+                                <div class="font-black text-xl sm:text-2xl mb-0.5 sm:mb-1 ${getPointsPerGame(player) >= 2.5 ? 'text-green-600 dark:text-green-400' : getPointsPerGame(player) >= 1.5 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}">
+                                    ${getPointsPerGame(player)}
+                                </div>
+                                <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">
+                                    PPG
                                 </div>
                                 <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">
                                     <span class="text-green-600 dark:text-green-400">${player.wins || 0}W</span>
@@ -2004,7 +2007,7 @@
                     data: player,
                     title: player.name,
                     subtitle: `${player.position || 'Unknown Position'} ${player.age ? '• ' + player.age + 'y' : ''}`,
-                    extra: `⚽ ${player.goals || 0} goals • 🅰️ ${player.assists || 0} assists • ${getWinPercentage(player)}% win rate`
+                    extra: `⚽ ${player.goals || 0} goals • 🅰️ ${player.assists || 0} assists • ${getPointsPerGame(player)} PPG`
                 }));
                 results = results.concat(playerResults);
             }
@@ -2165,10 +2168,11 @@
         });
 
         // Helper function for win percentage (if not already defined)
-        function getWinPercentage(player) {
+        function getPointsPerGame(player) {
             const totalGames = (player.wins || 0) + (player.draws || 0) + (player.losses || 0);
             if (totalGames === 0) return 0;
-            return Math.round(((player.wins || 0) / totalGames) * 100);
+            const totalPoints = (player.wins || 0) * 3 + (player.draws || 0) * 1;
+            return (totalPoints / totalGames).toFixed(2);
         }
 
         // Placeholder functions for missing features
@@ -2858,7 +2862,7 @@
             displayAllPlayers();
         }
 
-        function getPlayerStatsDisplay(player, totalGames, winRate) {
+        function getPlayerStatsDisplay(player, totalGames, ppg) {
             // Display different stats based on current sort
             switch(playersSortBy) {
                 case 'goals':
@@ -2903,8 +2907,8 @@
                                 <div class="text-xs text-gray-600 dark:text-gray-400 font-semibold">Wins</div>
                             </div>
                             <div class="flex-1">
-                                <div class="text-xl font-bold text-yellow-600 dark:text-yellow-400">${winRate}%</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+                                <div class="text-xl font-bold text-yellow-600 dark:text-yellow-400">${ppg}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">PPG</div>
                             </div>
                             <div class="flex-1">
                                 <div class="text-xl font-bold text-gray-600 dark:text-gray-400">${totalGames}</div>
@@ -2924,8 +2928,8 @@
                                 <div class="text-xs text-gray-500 dark:text-gray-400">Wins</div>
                             </div>
                             <div class="flex-1">
-                                <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${winRate}%</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+                                <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${ppg}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">PPG</div>
                             </div>
                         </div>
                     `;
@@ -2965,7 +2969,7 @@
             
             grid.innerHTML = sortedPlayers.map(player => {
                 const photoUrl = player.profilePicture || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(player.name) + '&background=random&size=200';
-                const winRate = getWinPercentage(player);
+                const ppg = getPointsPerGame(player);
                 const totalGames = (player.wins || 0) + (player.draws || 0) + (player.losses || 0);
                 
                 const xpProgress = getXpForNextLevel(player.xp || 0);
@@ -2991,7 +2995,7 @@
                             </div>
                             <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">${player.name}</h4>
                             ${player.phoneNumber ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-2">📱 ${player.phoneNumber}</p>` : ''}
-                            ${getPlayerStatsDisplay(player, totalGames, winRate)}
+                            ${getPlayerStatsDisplay(player, totalGames, ppg)}
                         </div>
                     </div>
                 `;
@@ -3299,11 +3303,11 @@
 
             // Calculate player strength score
             const getPlayerStrength = (p) => {
-                const winRate = getWinPercentage(p);
+                const ppg = parseFloat(getPointsPerGame(p));
                 const goals = p.goals || 0;
                 const assists = p.assists || 0;
                 const level = calculateLevel(p.xp || 0);
-                let base = winRate * 1.0 + goals * 2.0 + assists * 1.5 + level * 3.0;
+                let base = ppg * 10.0 + goals * 2.0 + assists * 1.5 + level * 3.0;
                 
                 // Adjust for last game outcome
                 if (winners.has(p.name)) base += 8;
@@ -3589,7 +3593,7 @@
                             <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">${isStarter ? (positions[idx]?.toUpperCase() || 'PLAYER') : 'SUB'} • Lv${calculateLevel(p.xp || 0)}</div>
                         </div>
-                        <div class="text-sm text-blue-600 dark:text-blue-400 font-bold">${getWinPercentage(p)}%</div>
+                        <div class="text-sm text-blue-600 dark:text-blue-400 font-bold">${getPointsPerGame(p)} PPG</div>
                         ${isAdmin ? `
                             <div class="flex gap-1">
                                 <button onclick="swapPlayerFieldBench('${p.name}', 1)" class="text-xs px-2 py-1 ${isStarter ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors" title="${isStarter ? 'Send to Bench' : 'Put on Field'}">
@@ -3620,7 +3624,7 @@
                             <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">${isStarter ? (positions[idx]?.toUpperCase() || 'PLAYER') : 'SUB'} • Lv${calculateLevel(p.xp || 0)}</div>
                         </div>
-                        <div class="text-sm text-red-600 dark:text-red-400 font-bold">${getWinPercentage(p)}%</div>
+                        <div class="text-sm text-red-600 dark:text-red-400 font-bold">${getPointsPerGame(p)} PPG</div>
                         ${isAdmin ? `
                             <div class="flex gap-1">
                                 <button onclick="swapPlayerFieldBench('${p.name}', 2)" class="text-xs px-2 py-1 ${isStarter ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors" title="${isStarter ? 'Send to Bench' : 'Put on Field'}">
@@ -3649,7 +3653,7 @@
                             <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">${positions[idx]?.toUpperCase() || 'PLAYER'} • Lv${calculateLevel(p.xp || 0)}</div>
                         </div>
-                        <div class="text-sm text-green-600 dark:text-green-400 font-bold">${getWinPercentage(p)}%</div>
+                        <div class="text-sm text-green-600 dark:text-green-400 font-bold">${getPointsPerGame(p)} PPG</div>
                         ${isAdmin ? `
                             <div class="flex gap-1">
                                 <button onclick="movePlayerToTeam('${p.name}', 3, 1)" class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors" title="Move to Team 1">
@@ -3676,7 +3680,7 @@
                             <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">${isStarter ? (positions[idx]?.toUpperCase() || 'PLAYER') : 'SUB'} • Lv${calculateLevel(p.xp || 0)}</div>
                         </div>
-                        <div class="text-sm text-red-600 dark:text-red-400 font-bold">${getWinPercentage(p)}%</div>
+                        <div class="text-sm text-red-600 dark:text-red-400 font-bold">${getPointsPerGame(p)} PPG</div>
                         ${isAdmin ? `
                             <div class="flex gap-1">
                                 <button onclick="swapPlayerFieldBench('${p.name}', 2)" class="text-xs px-2 py-1 ${isStarter ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors" title="${isStarter ? 'Send to Bench' : 'Put on Field'}">
@@ -3707,7 +3711,7 @@
                             <div class="font-semibold text-gray-900 dark:text-white">${p.name}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">${positions[idx]?.toUpperCase() || 'PLAYER'} • Lv${calculateLevel(p.xp || 0)}</div>
                         </div>
-                        <div class="text-sm text-green-600 dark:text-green-400 font-bold">${getWinPercentage(p)}%</div>
+                        <div class="text-sm text-green-600 dark:text-green-400 font-bold">${getPointsPerGame(p)} PPG</div>
                         ${isAdmin ? `
                             <div class="flex gap-1">
                                 <button onclick="movePlayerToTeam('${p.name}', 3, 1)" class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors" title="Move to Team 1">
@@ -4894,7 +4898,7 @@
             }
 
             const playersHTML = players.map(player => {
-                const winRate = getWinPercentage(player);
+                const ppg = getPointsPerGame(player);
                 const goalsPerGame = player.gamesPlayed > 0 ? (player.goals / player.gamesPlayed).toFixed(1) : '0.0';
                 
                 return `
@@ -4906,10 +4910,10 @@
                                 ${player.age ? `<p class="text-xs text-gray-500">${player.age} years old</p>` : ''}
                             </div>
                             <div class="text-right">
-                                <div class="text-xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
-                                    ${winRate}%
+                                <div class="text-xl font-bold ${ppg >= 2.5 ? 'text-green-500' : ppg >= 1.5 ? 'text-orange-500' : 'text-red-500'}">
+                                    ${ppg}
                                 </div>
-                                <div class="text-xs text-gray-500">Win Rate</div>
+                                <div class="text-xs text-gray-500">PPG</div>
                             </div>
                         </div>
                         
@@ -5110,7 +5114,7 @@
             }
 
             const playersHTML = filteredPlayers.map(player => {
-                const winRate = getWinPercentage(player);
+                const ppg = getPointsPerGame(player);
                 const goalsPerGame = player.gamesPlayed > 0 ? (player.goals / player.gamesPlayed).toFixed(1) : '0.0';
                 
                 return `
@@ -5122,10 +5126,10 @@
                                 ${player.age ? `<p class="text-xs text-gray-500">${player.age} years old</p>` : ''}
                             </div>
                             <div class="text-right">
-                                <div class="text-xl font-bold ${winRate >= 70 ? 'text-green-500' : winRate >= 50 ? 'text-orange-500' : 'text-red-500'}">
-                                    ${winRate}%
+                                <div class="text-xl font-bold ${ppg >= 2.5 ? 'text-green-500' : ppg >= 1.5 ? 'text-orange-500' : 'text-red-500'}">
+                                    ${ppg}
                                 </div>
-                                <div class="text-xs text-gray-500">Win Rate</div>
+                                <div class="text-xs text-gray-500">PPG</div>
                             </div>
                         </div>
                         
@@ -5420,9 +5424,11 @@
             document.body.appendChild(notification);
         }
 
-        function getWinPercentage(player) {
-            if (player.gamesPlayed === 0) return 0;
-            return Math.round((player.wins / player.gamesPlayed) * 100);
+        function getPointsPerGame(player) {
+            const totalGames = (player.wins || 0) + (player.draws || 0) + (player.losses || 0);
+            if (totalGames === 0) return 0;
+            const totalPoints = (player.wins || 0) * 3 + (player.draws || 0) * 1;
+            return (totalPoints / totalGames).toFixed(2);
         }
 
         // Player Profile Functions
@@ -5775,8 +5781,8 @@
                                 <div class="text-sm text-gray-600 dark:text-gray-400">Assists</div>
                             </div>
                             <div class="text-center p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                                <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${getWinPercentage(player)}%</div>
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Win Rate</div>
+                                <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${getPointsPerGame(player)}</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">PPG</div>
                             </div>
                         </div>
                         <div class="mt-4 flex justify-center gap-6 text-sm">
