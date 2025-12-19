@@ -2704,6 +2704,7 @@
                         location: location,
                         notes: notes || '',
                         availability: {},
+                        visibility: 'all',
                         createdAt: window.firebase.serverTimestamp(),
                         createdBy: currentUser.email,
                         createdByUid: currentUser.id
@@ -4079,6 +4080,19 @@
                 const noPlayers = Object.entries(availability).filter(([name, status]) => status === 'no').map(([name]) => name);
 
                 const currentPlayerStatus = linkedPlayer ? availability[linkedPlayer.name] : null;
+                
+                // Define scoreEditHtml (empty for scheduled games, used for past games)
+                const scoreEditHtml = '';
+                
+                // Define adminControls for delete button
+                const adminControls = currentUser && currentUser.isAdmin ? `
+                    <button onclick="deleteScheduledGame('${game.id}')" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all duration-200 shadow-md">
+                        🗑️ Delete Game
+                    </button>
+                ` : '';
+                
+                // Define isLive (false for scheduled games)
+                const isLive = false;
                 
                 return `
                     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-lg hover:shadow-xl transition-all duration-300">
