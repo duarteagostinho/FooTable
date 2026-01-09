@@ -222,6 +222,9 @@
                 <button onclick="switchDashboardTab('allGames')" id="tab-allGames" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
                     📚 All Games
                 </button>
+                <button onclick="switchDashboardTab('highlights')" id="tab-highlights" class="dashboard-tab px-6 py-3 rounded-xl font-semibold text-base transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
+                    🎬 Highlights
+                </button>
             </div>
 
             <!-- Tab Content -->
@@ -329,6 +332,24 @@
                     </div>
                     <div id="allGamesList">
                         <p class="text-gray-500 dark:text-gray-400 text-center py-8 text-lg">Loading games... 🔄</p>
+                    </div>
+                </div>
+
+                <!-- Highlights Tab -->
+                <div id="content-highlights" class="dashboard-content hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-4">
+                            <div class="p-3 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg">
+                                <span class="text-white text-2xl">🎬</span>
+                            </div>
+                            <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Game Highlights</h3>
+                        </div>
+                        <button onclick="showAddHighlightModal()" id="addHighlightBtn" class="hidden px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-lg font-semibold hover:from-pink-600 hover:to-rose-700 transition-all duration-300 shadow-lg">
+                            + Add Highlight
+                        </button>
+                    </div>
+                    <div id="highlightsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg col-span-full">No highlights yet! 🎥</p>
                     </div>
                 </div>
             </div>
@@ -592,6 +613,13 @@
                             <option value="">Select Player of the Match (optional)...</option>
                         </select>
                     </div>
+
+                    <!-- Highlight URLs -->
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                        <label class="block text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">🎬 Game Highlights (optional):</label>
+                        <textarea id="gameHighlightUrls" rows="3" placeholder="Enter video URLs (one per line)&#10;YouTube: https://youtube.com/watch?v=...&#10;Vimeo: https://vimeo.com/...&#10;Streamable: https://streamable.com/..." class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"></textarea>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">💡 Add video URLs for highlights. Each URL will be automatically saved as a highlight linked to this game.</p>
+                    </div>
                 </form>
                 
                 <div class="flex gap-3 mt-6 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -758,6 +786,68 @@
     </div>
 
     <!-- Game Details Modal -->
+    <!-- Add Highlight Modal -->
+    <div id="highlightModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 animate-fade-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700">
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="p-2 rounded-lg bg-gradient-to-r from-pink-500 to-rose-600">
+                        <span class="text-white text-xl">🎬</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Add Game Highlight</h3>
+                </div>
+                
+                <form id="highlightForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🎯 Title:</label>
+                        <input type="text" id="highlightTitle" placeholder="Amazing goal by John" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-pink-500 dark:focus:ring-pink-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📝 Description:</label>
+                        <textarea id="highlightDescription" rows="3" placeholder="Describe the highlight..." class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-pink-500 dark:focus:ring-pink-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">⚽ Link to Game (optional):</label>
+                        <select id="highlightGameId" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-pink-500 dark:focus:ring-pink-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="">Select a game (optional)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">🎥 Video URL:</label>
+                        <input type="url" id="highlightVideoUrl" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..." class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-pink-500 dark:focus:ring-pink-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <div class="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <p class="text-sm text-blue-800 dark:text-blue-200 font-semibold mb-2">📌 Supported Platforms:</p>
+                            <ul class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                                <li>• <strong>YouTube:</strong> https://youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID</li>
+                                <li>• <strong>Vimeo:</strong> https://vimeo.com/VIDEO_ID</li>
+                                <li>• <strong>Streamable:</strong> https://streamable.com/VIDEO_ID</li>
+                                <li>• <strong>Imgur:</strong> https://imgur.com/VIDEO_ID or https://i.imgur.com/VIDEO_ID.mp4</li>
+                                <li>• <strong>Direct Video:</strong> Any .mp4, .webm, or .ogg URL</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">📅 Date:</label>
+                        <input type="date" id="highlightDate" class="w-full p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-pink-500 dark:focus:ring-pink-400 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                </form>
+                
+                <div class="flex gap-3 mt-8">
+                    <button onclick="hideAddHighlightModal()" class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                        Cancel
+                    </button>
+                    <button onclick="addHighlight()" class="flex-1 px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                        🎬 Add Highlight
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="gameDetailsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 animate-bounce-in border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
             <div class="p-6 sm:p-8">
@@ -799,6 +889,7 @@
         let users = [];
         let scheduledGames = [];
         let notifications = [];
+        let highlights = [];
         let currentUser = null;
         let currentEditingPlayer = null;
         let currentGameIndex = null;
@@ -1018,6 +1109,26 @@
                     }
                 );
                 unsubscribeFunctions.push(unsubPlayers);
+
+                // Listen for highlights changes
+                const highlightsQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'highlights'),
+                    window.firebase.orderBy('date', 'desc')
+                );
+                
+                const unsubHighlights = window.firebase.onSnapshot(highlightsQuery,
+                    (snapshot) => {
+                        highlights = snapshot.docs.map(doc => {
+                            const data = doc.data();
+                            return { ...data, firestoreId: doc.id };
+                        });
+                        displayHighlights();
+                    },
+                    (error) => {
+                        console.error('Highlights listener error:', error);
+                    }
+                );
+                unsubscribeFunctions.push(unsubHighlights);
 
                 // Listen for scheduled games changes
                 const scheduledGamesQuery = window.firebase.query(
@@ -1663,6 +1774,8 @@
                 displayTeamGenerator();
             } else if (tabName === 'allGames') {
                 displayAllGamesTab();
+            } else if (tabName === 'highlights') {
+                displayHighlights();
             }
         }
 
@@ -2175,6 +2288,310 @@
             return (totalPoints / totalGames).toFixed(2);
         }
 
+        // ===== HIGHLIGHTS FUNCTIONS =====
+        
+        function showAddHighlightModal() {
+            if (!currentUser?.isAdmin) {
+                alert('Only administrators can add highlights');
+                return;
+            }
+            
+            // Populate game select dropdown
+            const gameSelect = document.getElementById('highlightGameId');
+            gameSelect.innerHTML = '<option value="">Select a game (optional)</option>';
+            
+            games.forEach(game => {
+                const option = document.createElement('option');
+                option.value = game.id;
+                option.textContent = `${game.date} - ${game.location} (${game.score1}-${game.score2})`;
+                gameSelect.appendChild(option);
+            });
+            
+            // Set default date to today
+            document.getElementById('highlightDate').valueAsDate = new Date();
+            
+            document.getElementById('highlightModal').classList.remove('hidden');
+            document.getElementById('highlightModal').classList.add('flex');
+        }
+
+        function hideAddHighlightModal() {
+            document.getElementById('highlightModal').classList.add('hidden');
+            document.getElementById('highlightModal').classList.remove('flex');
+            document.getElementById('highlightForm').reset();
+        }
+
+        async function addHighlight() {
+            const title = document.getElementById('highlightTitle').value.trim();
+            const description = document.getElementById('highlightDescription').value.trim();
+            const gameId = document.getElementById('highlightGameId').value;
+            const videoUrl = document.getElementById('highlightVideoUrl').value.trim();
+            const date = document.getElementById('highlightDate').value;
+
+            if (!title) {
+                alert('Please enter a title');
+                return;
+            }
+
+            if (!videoUrl) {
+                alert('Please enter a video URL');
+                return;
+            }
+
+            if (!date) {
+                alert('Please select a date');
+                return;
+            }
+
+            // Validate and convert video URL to embed format
+            const embedUrl = convertToEmbedUrl(videoUrl);
+            if (!embedUrl) {
+                alert('Invalid video URL. Supported platforms:\n\n• YouTube (youtube.com, youtu.be)\n• Vimeo (vimeo.com)\n• Streamable (streamable.com)\n• Imgur (imgur.com, i.imgur.com)\n• Direct video files (.mp4, .webm, .ogg)\n\nYour URL: ' + videoUrl);
+                return;
+            }
+
+            const highlight = {
+                id: Date.now().toString(),
+                title,
+                description,
+                gameId: gameId || null,
+                videoUrl,
+                embedUrl,
+                date,
+                addedBy: currentUser.username,
+                addedAt: new Date().toISOString()
+            };
+
+            try {
+                // Add to Firestore
+                await window.firebase.addDoc(
+                    window.firebase.collection(window.firebase.db, 'highlights'),
+                    highlight
+                );
+                
+                // Don't manually add - Firebase listener will handle it
+                displayHighlights();
+                hideAddHighlightModal();
+                alert('Highlight added successfully! 🎬');
+            } catch (error) {
+                console.error('Error adding highlight:', error);
+                alert('Failed to add highlight: ' + error.message);
+            }
+        }
+
+        function convertToEmbedUrl(url) {
+            // YouTube
+            if (url.includes('youtube.com/watch')) {
+                const videoId = url.split('v=')[1]?.split('&')[0];
+                if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+            }
+            if (url.includes('youtu.be/')) {
+                const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+                if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+            }
+            
+            // Vimeo
+            if (url.includes('vimeo.com/')) {
+                const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+                if (videoId) return `https://player.vimeo.com/video/${videoId}`;
+            }
+            
+            // Streamable
+            if (url.includes('streamable.com/')) {
+                const videoId = url.split('streamable.com/')[1]?.split('?')[0];
+                if (videoId) return `https://streamable.com/e/${videoId}`;
+            }
+            
+            // Imgur - supports both imgur.com and i.imgur.com
+            if (url.includes('imgur.com/')) {
+                // Direct image/video links (i.imgur.com/VIDEO_ID.mp4)
+                if (url.includes('i.imgur.com/') && (url.endsWith('.mp4') || url.endsWith('.gifv'))) {
+                    return url.replace('.gifv', '.mp4'); // Convert gifv to mp4
+                }
+                // Regular imgur links (imgur.com/VIDEO_ID)
+                if (url.includes('imgur.com/') && !url.includes('i.imgur.com')) {
+                    const videoId = url.split('imgur.com/')[1]?.split('?')[0].split('/')[0];
+                    if (videoId && videoId !== 'a' && videoId !== 'gallery') {
+                        // Try direct mp4 first
+                        return `https://i.imgur.com/${videoId}.mp4`;
+                    }
+                }
+            }
+            
+            // Direct MP4
+            if (url.endsWith('.mp4') || url.endsWith('.webm') || url.endsWith('.ogg')) {
+                return url; // Will use video tag instead of iframe
+            }
+            
+            return null;
+        }
+
+        function displayHighlights() {
+            const container = document.getElementById('highlightsList');
+            
+            if (highlights.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-12 text-lg col-span-full">No highlights yet! 🎥</p>';
+                return;
+            }
+
+            const highlightsHTML = highlights
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map(highlight => {
+                    const game = highlight.gameId ? games.find(g => g.id === highlight.gameId) : null;
+                    const isDirectVideo = highlight.embedUrl.endsWith('.mp4') || highlight.embedUrl.endsWith('.webm') || highlight.embedUrl.endsWith('.ogg');
+                    
+                    return `
+                        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all duration-300">
+                            <div class="relative aspect-video bg-gray-900">
+                                ${isDirectVideo ? 
+                                    `<video controls class="w-full h-full">
+                                        <source src="${highlight.embedUrl}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>` :
+                                    `<iframe 
+                                        src="${highlight.embedUrl}" 
+                                        class="w-full h-full" 
+                                        frameborder="0" 
+                                        allow="autoplay; fullscreen; picture-in-picture" 
+                                        allowfullscreen>
+                                    </iframe>`
+                                }
+                            </div>
+                            <div class="p-4">
+                                <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">${highlight.title}</h4>
+                                ${highlight.description ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-3">${highlight.description}</p>` : ''}
+                                
+                                <div class="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                                    <span class="flex items-center gap-1">
+                                        📅 ${new Date(highlight.date).toLocaleDateString()}
+                                    </span>
+                                    ${game ? `
+                                        <button onclick="showGameDetailsById('${game.id}')" class="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+                                            ⚽ ${game.location} (${game.score1}-${game.score2})
+                                        </button>
+                                    ` : ''}
+                                </div>
+                                
+                                ${currentUser?.isAdmin ? `
+                                    <div class="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                        <button onclick="deleteHighlight('${highlight.id}')" class="flex-1 px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-xs rounded font-medium transition-all duration-200">
+                                            🗑️ Delete
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            
+            container.innerHTML = highlightsHTML;
+        }
+
+        function showGameDetailsById(gameId) {
+            const gameIndex = games.findIndex(g => g.id === gameId);
+            if (gameIndex >= 0) {
+                showGameDetails(gameIndex);
+            }
+        }
+
+        async function deleteHighlight(highlightId) {
+            if (!currentUser?.isAdmin) {
+                alert('Only administrators can delete highlights');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete this highlight?')) {
+                return;
+            }
+
+            try {
+                // Find the highlight in Firestore
+                const highlightsQuery = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'highlights')
+                );
+                const snapshot = await window.firebase.getDocs(highlightsQuery);
+                
+                let docId = null;
+                snapshot.docs.forEach(doc => {
+                    if (doc.data().id === highlightId) {
+                        docId = doc.id;
+                    }
+                });
+
+                if (docId) {
+                    await window.firebase.deleteDoc(
+                        window.firebase.doc(window.firebase.db, 'highlights', docId)
+                    );
+                    
+                    // Remove from local array
+                    const index = highlights.findIndex(h => h.id === highlightId);
+                    if (index > -1) {
+                        highlights.splice(index, 1);
+                    }
+                    
+                    displayHighlights();
+                    alert('Highlight deleted successfully! 🗑️');
+                } else {
+                    alert('Highlight not found');
+                }
+            } catch (error) {
+                console.error('Error deleting highlight:', error);
+                alert('Failed to delete highlight: ' + error.message);
+            }
+        }
+
+        function displayGameHighlights(gameId) {
+            const gameHighlights = highlights.filter(h => h.gameId === gameId);
+            const container = document.getElementById('gameHighlightsSection');
+            
+            if (!container) return;
+            
+            if (gameHighlights.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            const highlightsHTML = `
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <h4 class="font-bold text-xl text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span>🎬</span>
+                        Game Highlights
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${gameHighlights.map(highlight => {
+                            const isDirectVideo = highlight.embedUrl.endsWith('.mp4') || highlight.embedUrl.endsWith('.webm') || highlight.embedUrl.endsWith('.ogg');
+                            return `
+                                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                                    <div class="relative aspect-video bg-gray-900">
+                                        ${isDirectVideo ? 
+                                            `<video controls class="w-full h-full">
+                                                <source src="${highlight.embedUrl}" type="video/mp4">
+                                                Your browser does not support the video tag.
+                                            </video>` :
+                                            `<iframe 
+                                                src="${highlight.embedUrl}" 
+                                                class="w-full h-full" 
+                                                frameborder="0" 
+                                                allow="autoplay; fullscreen; picture-in-picture" 
+                                                allowfullscreen>
+                                            </iframe>`
+                                        }
+                                    </div>
+                                    <div class="p-3">
+                                        <h5 class="font-semibold text-sm text-gray-900 dark:text-white">${highlight.title}</h5>
+                                        ${highlight.description ? `<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">${highlight.description}</p>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = highlightsHTML;
+        }
+
+        // ===== END HIGHLIGHTS FUNCTIONS =====
+
         // Placeholder functions for missing features
         function showLogin() { 
             document.getElementById('loginModal').classList.remove('hidden');
@@ -2290,9 +2707,18 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Game Highlights Section -->
+                <div id="gameHighlightsSection" class="mt-6">
+                    <!-- Highlights will be inserted here -->
+                </div>
             `;
 
             document.getElementById('gameDetailsContent').innerHTML = content;
+            
+            // Load and display highlights for this game
+            displayGameHighlights(game.id);
+            
             document.getElementById('gameDetailsModal').classList.remove('hidden');
             document.getElementById('gameDetailsModal').classList.add('flex');
         }
@@ -4445,10 +4871,12 @@
                     adminControls.classList.remove('hidden');
                     document.getElementById('scheduleGameBtn')?.classList.remove('hidden');
                     document.getElementById('gamesHistoryBtn')?.classList.remove('hidden');
+                    document.getElementById('addHighlightBtn')?.classList.remove('hidden');
                 } else {
                     adminControls.classList.add('hidden');
                     document.getElementById('scheduleGameBtn')?.classList.add('hidden');
                     document.getElementById('gamesHistoryBtn')?.classList.add('hidden');
+                    document.getElementById('addHighlightBtn')?.classList.add('hidden');
                 }
             } else {
                 userInfo.innerHTML = '';
@@ -4779,6 +5207,10 @@
             // Get Player of the Match
             const playerOfTheMatch = document.getElementById('playerOfTheMatch').value || null;
             
+            // Get highlight URLs
+            const highlightUrlsText = document.getElementById('gameHighlightUrls').value.trim();
+            const highlightUrls = highlightUrlsText ? highlightUrlsText.split('\n').map(url => url.trim()).filter(url => url) : [];
+            
             if (isEditMode && editIndex >= 0) {
                 // Edit existing game
                 const existingGame = games[editIndex];
@@ -4826,14 +5258,62 @@
                 // Use Firebase service to add game
                 try {
                     await FirebaseService.addGame(game);
+                    
+                    // Process highlight URLs and create highlights
+                    if (highlightUrls.length > 0) {
+                        await createHighlightsFromUrls(highlightUrls, game.id, game.date, game.location);
+                    }
+                    
                     // Update player statistics
                     updatePlayerStats(game);
                     updateDisplay();
                     hideAddGameModal();
-                    alert('Game added successfully!');
+                    alert('Game added successfully!' + (highlightUrls.length > 0 ? ` ${highlightUrls.length} highlight(s) created! 🎬` : ''));
                 } catch (error) {
                     alert('Failed to add game: ' + (error?.message || error));
                 }
+            }
+        }
+
+        async function createHighlightsFromUrls(urls, gameId, gameDate, gameLocation) {
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const url of urls) {
+                const embedUrl = convertToEmbedUrl(url);
+                if (!embedUrl) {
+                    failCount++;
+                    continue;
+                }
+                
+                try {
+                    const highlight = {
+                        id: Date.now().toString() + Math.random(),
+                        title: `Highlight from ${gameLocation}`,
+                        description: `Game on ${gameDate}`,
+                        gameId: gameId,
+                        videoUrl: url,
+                        embedUrl: embedUrl,
+                        date: gameDate,
+                        addedBy: currentUser.username,
+                        addedAt: new Date().toISOString()
+                    };
+                    
+                    await window.firebase.addDoc(
+                        window.firebase.collection(window.firebase.db, 'highlights'),
+                        highlight
+                    );
+                    
+                    // Don't manually push - the Firebase listener will handle it
+                    successCount++;
+                } catch (error) {
+                    console.error('Error creating highlight:', error);
+                    failCount++;
+                }
+            }
+            
+            if (failCount > 0) {
+                console.warn(`${failCount} highlight(s) could not be created (invalid URLs or errors)`);
             }
         }
 
